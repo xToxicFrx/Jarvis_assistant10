@@ -1,0 +1,134 @@
+/* ============================================================
+   JARVIS HUD — Iron-Man-Stil
+   Dunkler Hintergrund, Cyan/Türkis-Akzente, dünne Linien.
+   ============================================================ */
+
+:root {
+  --cyan: #2ff3ff;        /* Hauptfarbe */
+  --cyan-dim: #2ff3ff66;  /* gedimmt (durchsichtig) */
+  --bg: #020912;          /* fast schwarz mit Blaustich */
+  --panel: #04121f99;     /* Panel-Hintergrund */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: radial-gradient(circle at 50% 50%, #05192b 0%, var(--bg) 70%);
+  color: var(--cyan);
+  font-family: 'Segoe UI', 'Courier New', monospace;
+  min-height: 100vh;
+  overflow: hidden;          /* kein Scrollen, ist ein Dashboard */
+  letter-spacing: 1px;
+}
+
+/* Raster: oben über volle Breite, dann links | mitte | rechts */
+#hud {
+  display: grid;
+  grid-template-columns: 240px 1fr 240px;
+  grid-template-rows: 70px 1fr;
+  grid-template-areas:
+    "top top top"
+    "left center right";
+  height: 100vh;
+  gap: 16px;
+  padding: 16px;
+}
+
+/* ---------- OBEN ---------- */
+.top {
+  grid-area: top;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--cyan-dim);
+  padding: 0 12px;
+}
+.brand { font-size: 24px; font-weight: bold; letter-spacing: 6px; text-shadow: 0 0 12px var(--cyan); }
+.datetime { text-align: right; }
+#time { font-size: 22px; display: block; text-shadow: 0 0 8px var(--cyan); }
+#date { font-size: 12px; color: var(--cyan-dim); }
+
+/* ---------- PANELS (links/rechts) ---------- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--cyan-dim);
+  border-radius: 10px;
+  padding: 16px;
+  backdrop-filter: blur(2px);
+}
+.left { grid-area: left; }
+.right { grid-area: right; }
+.panel h2 {
+  font-size: 13px;
+  letter-spacing: 3px;
+  margin-bottom: 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--cyan-dim);
+  color: var(--cyan);
+}
+.panel h2:not(:first-child) { margin-top: 24px; }
+
+/* Systemstatus-Zeilen */
+.stat { margin-bottom: 16px; font-size: 12px; }
+.stat .label { color: var(--cyan-dim); display: block; margin-bottom: 4px; }
+.stat .val { float: right; }
+.bar {
+  height: 6px;
+  background: #ffffff11;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  transition: width 0.5s;
+}
+.power {
+  margin-top: 24px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.power .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ---------- MITTE: Visualizer ---------- */
+.center {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#viz { max-width: 100%; }
+.status {
+  margin-top: 20px;
+  font-size: 18px;
+  letter-spacing: 5px;
+  color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan);
+}
+
+/* ---------- RECHTS: Wetter + Menü ---------- */
+.weather { text-align: center; }
+.temp { font-size: 38px; text-shadow: 0 0 12px var(--cyan); }
+.desc { font-size: 13px; color: var(--cyan-dim); }
+.loc { font-size: 11px; color: var(--cyan-dim); margin-top: 4px; }
+.menu { list-style: none; }
+.menu li {
+  padding: 10px 8px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--cyan-dim);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.menu li:hover { background: #2ff3ff11; }

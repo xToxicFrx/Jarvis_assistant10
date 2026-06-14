@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Das ganze Dashboard. Aufgeteilt in: oben, links, mitte, rechts, unten -->
+  <div id="hud">
+
+    <!-- ===== OBEN LINKS: Datum + Uhrzeit ===== -->
+    <header class="top">
+      <div class="brand">J.A.R.V.I.S</div>
+      <div class="datetime">
+        <span id="time">--:--:--</span>
+        <span id="date">--.--.----</span>
+      </div>
+    </header>
+
+    <!-- ===== LINKS: Systemstatus ===== -->
+    <aside class="panel left">
+      <h2>SYSTEM</h2>
+      <div class="stat">
+        <span class="label">SPEICHER</span>
+        <div class="bar"><div id="mem-bar" class="bar-fill"></div></div>
+        <span id="mem-val" class="val">--</span>
+      </div>
+      <div class="stat">
+        <span class="label">VERBINDUNG</span>
+        <span id="net-val" class="val">--</span>
+      </div>
+      <div class="stat">
+        <span class="label">BROWSER</span>
+        <span id="browser-val" class="val">--</span>
+      </div>
+      <div class="power">
+        <span class="dot"></span> SYSTEM ONLINE
+      </div>
+    </aside>
+
+    <!-- ===== MITTE: Sprach-Visualizer + Status ===== -->
+    <main class="center">
+      <canvas id="viz" width="420" height="420"></canvas>
+      <div id="status" class="status">IDLE</div>
+    </main>
+
+    <!-- ===== RECHTS: Menü + Wetter ===== -->
+    <aside class="panel right">
+      <h2>WETTER</h2>
+      <div class="weather">
+        <div id="weather-temp" class="temp">--°</div>
+        <div id="weather-desc" class="desc">lädt…</div>
+        <div id="weather-loc" class="loc"></div>
+      </div>
+      <h2>MENÜ</h2>
+      <ul class="menu">
+        <li>🎤 Sprache</li>
+        <li>📂 Obsidian</li>
+        <li>🧠 Gehirn</li>
+        <li>⚙️ Einstellungen</li>
+      </ul>
+    </aside>
+
+  </div>
+
+  <!-- Scripts: erst die Bausteine, dann main (startet alles) -->
+  <script src="/js/voice-viz.js"></script>
+  <script src="/js/hud.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>
