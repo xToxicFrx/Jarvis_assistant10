@@ -7,67 +7,137 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <!-- Das ganze Dashboard. Aufgeteilt in: oben, links, mitte, rechts, unten -->
-  <div id="hud">
 
-    <!-- ===== OBEN LINKS: Datum + Uhrzeit ===== -->
+  <canvas id="bg"></canvas>
+  <!-- scan-line overlay for CRT feel -->
+  <div id="scanlines"></div>
+
+  <!-- ===== LOGIN ===== -->
+  <div id="login" class="overlay">
+    <div class="login-arc"></div>
+    <h1>J.A.R.V.I.S</h1>
+    <p>Just A Rather Very Intelligent System</p>
+    <p style="font-size:11px;margin-top:-8px">Gib dein Zugangspasswort ein, um JARVIS zu starten.</p>
+    <input id="pw" type="password" placeholder="PASSWORT" autocomplete="current-password" />
+    <button id="loginBtn">▶ ENTSPERREN</button>
+    <span id="loginErr" class="err"></span>
+  </div>
+
+  <!-- ===== HUD ===== -->
+  <div id="hud" class="hidden">
+
     <header class="top">
-      <div class="brand">J.A.R.V.I.S</div>
+      <div class="brand">J.A.R.V.I.S<span class="sub">// PERSONAL ASSISTANT v2.4</span></div>
+      <div class="top-center">
+        <span id="statusBar" class="status-bar">● SYSTEM ONLINE</span>
+      </div>
       <div class="datetime">
         <span id="time">--:--:--</span>
         <span id="date">--.--.----</span>
       </div>
     </header>
 
-    <!-- ===== LINKS: Systemstatus ===== -->
+    <!-- LINKS: System + Zweites Gehirn -->
     <aside class="panel left">
+      <span class="bracket tl"></span><span class="bracket tr"></span>
+      <span class="bracket bl"></span><span class="bracket br"></span>
+
       <h2>SYSTEM</h2>
-      <div class="stat">
-        <span class="label">SPEICHER</span>
-        <div class="bar"><div id="mem-bar" class="bar-fill"></div></div>
-        <span id="mem-val" class="val">--</span>
+      <div class="gauges">
+        <canvas id="g-load" width="74" height="74"></canvas>
+        <canvas id="g-mem" width="74" height="74"></canvas>
       </div>
-      <div class="stat">
-        <span class="label">VERBINDUNG</span>
-        <span id="net-val" class="val">--</span>
-      </div>
-      <div class="stat">
-        <span class="label">BROWSER</span>
-        <span id="browser-val" class="val">--</span>
-      </div>
-      <div class="power">
-        <span class="dot"></span> SYSTEM ONLINE
+      <div class="stat"><span class="label">VERBINDUNG</span><span id="net-val" class="val">--</span></div>
+      <div class="power"><span class="dot"></span> SYSTEM ONLINE</div>
+
+      <h2>ZWEITES GEHIRN</h2>
+      <div id="vaultBox" class="vault-box">
+        <div class="vault-row"><span>📓 Notizen</span><span id="v-notes">–</span></div>
+        <div class="vault-row"><span>📁 Ordner</span><span id="v-folders">–</span></div>
+
+        <!-- Vault search -->
+        <div class="vault-search-row">
+          <input id="vaultSearch" class="vault-search" placeholder="Notiz suchen…" />
+          <button id="vaultSearchBtn" class="vault-search-btn">🔍</button>
+        </div>
+        <div id="vaultSearchResults" class="vault-search-results hidden"></div>
+
+        <div class="vault-tags" id="v-tags"></div>
+        <div class="vault-recent-title">Zuletzt geändert:</div>
+        <div id="v-recent" class="vault-recent">Vault nicht verbunden (📂)</div>
+
+        <!-- Daily note preview -->
+        <div id="daily-note-section" class="hidden">
+          <div class="vault-recent-title" style="margin-top:10px">Heutige Notiz:</div>
+          <div id="daily-note-preview" class="daily-note-preview">–</div>
+        </div>
       </div>
     </aside>
 
-    <!-- ===== MITTE: Sprach-Visualizer + Status ===== -->
+    <!-- MITTE: Reaktor -->
     <main class="center">
       <canvas id="viz" width="420" height="420"></canvas>
       <div id="status" class="status">IDLE</div>
+      <div id="transcript-center" class="transcript-center"></div>
     </main>
 
-    <!-- ===== RECHTS: Menü + Wetter ===== -->
+    <!-- RECHTS: Wetter + Aktivität -->
     <aside class="panel right">
+      <span class="bracket tl"></span><span class="bracket tr"></span>
+      <span class="bracket bl"></span><span class="bracket br"></span>
+
       <h2>WETTER</h2>
       <div class="weather">
         <div id="weather-temp" class="temp">--°</div>
         <div id="weather-desc" class="desc">lädt…</div>
-        <div id="weather-loc" class="loc"></div>
+        <div id="weather-forecast" class="forecast-row"></div>
       </div>
-      <h2>MENÜ</h2>
-      <ul class="menu">
-        <li>🎤 Sprache</li>
-        <li>📂 Obsidian</li>
-        <li>🧠 Gehirn</li>
-        <li>⚙️ Einstellungen</li>
-      </ul>
+
+      <h2>AKTIVITÄT</h2>
+      <div id="log" class="log"></div>
     </aside>
+
+    <!-- UNTEN: Eingabe & Knöpfe -->
+    <footer class="bottom">
+      <div id="transcript">Bereit. Sag etwas oder tippe eine Frage…</div>
+      <input id="textInput" type="text" placeholder="Frage an JARVIS…" />
+      <button id="sendBtn">SENDEN</button>
+      <button id="micBtn" title="Halten zum Sprechen (oder Leertaste)">🎤</button>
+      <button id="wakeBtn" title="Wake-Word an/aus: sag 'Jarvis'">👂 AUS</button>
+      <button id="vaultBtn" title="Obsidian-Vault verbinden">📂</button>
+      <button id="quickSaveBtn" title="Idee direkt in Daily Note speichern (Strg+S)">💾</button>
+      <button id="resetBtn" title="Gespräch / Gedächtnis löschen">🗑</button>
+    </footer>
 
   </div>
 
-  <!-- Scripts: erst die Bausteine, dann main (startet alles) -->
+  <!-- NOTE READER MODAL -->
+  <div id="noteModal" class="note-modal hidden">
+    <div class="note-modal-inner">
+      <div class="note-modal-header">
+        <span id="noteModalTitle">Notiz</span>
+        <button id="noteModalClose">✕</button>
+      </div>
+      <pre id="noteModalContent" class="note-modal-content"></pre>
+    </div>
+  </div>
+
+  <!-- QUICK SAVE MODAL -->
+  <div id="quickSaveModal" class="note-modal hidden">
+    <div class="note-modal-inner" style="max-width:500px">
+      <div class="note-modal-header">
+        <span>💾 Idee speichern (Daily Note)</span>
+        <button id="quickSaveClose">✕</button>
+      </div>
+      <textarea id="quickSaveText" class="quick-save-textarea" placeholder="Deine Idee, Gedanke oder Notiz…"></textarea>
+      <button id="quickSaveConfirm" class="quick-save-confirm">IN DAILY NOTE SPEICHERN</button>
+    </div>
+  </div>
+
   <script src="/js/voice-viz.js"></script>
-  <script src="/js/hud.js"></script>
-  <script src="/js/main.js"></script>
+  <script src="/js/hud-fx.js"></script>
+  <script src="/js/obsidian.js"></script>
+  <script src="/js/tools.js"></script>
+  <script src="/js/app.js"></script>
 </body>
 </html>

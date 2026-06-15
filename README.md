@@ -1,58 +1,108 @@
-# JARVIS — KI-Sprachassistent (Web-Version)
+# JARVIS — sicherer KI-Sprachassistent (Vercel + GitHub)
 
-Ein sprachgesteuerter KI-Assistent im Iron-Man-HUD-Stil, der **komplett im
-Browser** läuft und über **Vercel** gehostet wird. Kein Python, keine
-Installation.
+Ein sprachgesteuerter KI-Assistent im Iron-Man-HUD-Stil. Läuft im Browser,
+gehostet über **Vercel**, verbunden mit **GitHub**. Die API-Keys liegen
+**sicher auf dem Server** — niemals im Code, niemals im Browser.
 
-## So bringst du JARVIS online (einmalig, ca. 5 Minuten)
+---
 
-### 1. Auf GitHub speichern
-Der Code liegt schon in deinem GitHub-Repo `Jarvis_assistant10`. ✅
+## 🔒 Wie die Sicherheit funktioniert
 
-### 2. Mit Vercel verbinden
-1. Geh auf **https://vercel.com** und melde dich mit **GitHub** an.
-2. Klick **"Add New… → Project"**.
-3. Wähl dein Repo **`Jarvis_assistant10`** aus → **Import**.
-4. Bei "Framework Preset" einfach **"Other"** lassen, nichts ändern.
-5. Klick **Deploy**.
-6. Nach ~1 Minute bekommst du eine Adresse wie **`jarvis-xxx.vercel.app`**.
+1. **Keys nur als Server-Geheimnisse:** Deine OpenAI- und ElevenLabs-Keys
+   speicherst du als *Environment Variables* bei Vercel. Sie stehen nie im
+   Code und kommen nie auf GitHub (`.gitignore` schützt `.env`).
+2. **Der Browser sieht die Keys nie:** Die Webseite ruft nur **deine eigenen**
+   Funktionen `/api/chat`, `/api/tts`, `/api/stt`. Diese fügen den Key
+   serverseitig hinzu und sprechen mit OpenAI/ElevenLabs.
+3. **Persönliches Passwort:** Jede Funktion ist mit deinem `APP_PASSWORD`
+   geschützt. Die Seite ist zwar im Internet, aber nur **du** kannst JARVIS
+   benutzen — niemand sonst kann deine Rechnung belasten.
+4. **Backstop:** Setz im OpenAI-Dashboard ein **Ausgabenlimit**.
 
-Das war's — öffne die Adresse und du siehst das HUD! 🎉
+---
 
-### 3. (Später) API-Keys hinzufügen
-Sobald wir Stimme & Gehirn einbauen, brauchst du Keys. Die kommen in Vercel
-unter **Settings → Environment Variables** (siehe `.env.example`):
+## 🚀 Einrichten (einmalig, ~10 Minuten)
 
-| Variable | Wofür | Wo bekommen |
-|----------|-------|-------------|
-| `OPENAI_API_KEY` | Gehirn + Whisper | platform.openai.com |
-| `ELEVENLABS_API_KEY` | Stimme | elevenlabs.io |
-| `ELEVENLABS_VOICE_ID` | welche Stimme | elevenlabs.io |
-| `PICOVOICE_ACCESS_KEY` | Wake-Word „Jarvis" | console.picovoice.ai |
+### Schritt 1 — Keys besorgen
+- **OpenAI:** platform.openai.com → *API keys* → *Create new secret key* (`sk-...`)
+- **ElevenLabs:** elevenlabs.io → Profil → *API Key*
+- **Voice-ID:** elevenlabs.io → *Voices* → bei einer Stimme die ID kopieren
+  (Standard ist schon `MMwckqU477oQxnAk1SgA`)
 
-⚠️ **Keys NIEMALS in den Code schreiben** — nur in Vercel eintragen. Setz im
-OpenAI-Dashboard ein Ausgabenlimit. ElevenLabs hat einen Gratis-Tier.
+### Schritt 2 — Code auf GitHub
+Der Code liegt in deinem Repo `Jarvis_assistant10`. Wenn Dateien fehlen:
+GitHub → **Add file → Upload files** → Dateien reinziehen → **Commit**.
 
-## Wichtig zu wissen
-- Vercel hostet nur die **Webseite**. Mikrofon, Lautsprecher und der Zugriff
-  auf deinen **Obsidian-Ordner** passieren in **deinem Browser** auf deinem PC.
-- **Benutze Chrome oder Edge** — der Obsidian-Ordnerzugriff (später) geht nur dort.
+### Schritt 3 — Vercel verbinden
+1. **vercel.com** → mit **GitHub** anmelden
+2. **Add New… → Project** → Repo `Jarvis_assistant10` → **Import**
+3. Framework: **Other** (nichts ändern)
+4. **NOCH NICHT auf Deploy klicken!** Erst die Keys eintragen ⬇️
 
-## Aufbau
+### Schritt 4 — Geheime Keys bei Vercel eintragen 🔑
+Im Import-Bildschirm (oder später unter **Settings → Environment Variables**)
+trag diese **4 Variablen** ein:
+
+| Name | Wert |
+|------|------|
+| `OPENAI_API_KEY` | dein OpenAI-Key |
+| `ELEVENLABS_API_KEY` | dein ElevenLabs-Key |
+| `ELEVENLABS_VOICE_ID` | `MMwckqU477oQxnAk1SgA` |
+| `APP_PASSWORD` | ein Passwort, das du dir ausdenkst |
+
+Dann **Deploy** klicken.
+
+### Schritt 5 — Benutzen
+1. Öffne deine `…vercel.app`-Adresse in **Chrome**
+2. Gib dein `APP_PASSWORD` ein
+3. 🎤 Mikro-Knopf (oder Leertaste) halten und sprechen — oder Text tippen
+4. JARVIS antwortet mit Stimme ✨
+
+> Test: `…vercel.app/api/health` zeigt, ob alle 4 Variablen gesetzt sind
+> (nur ja/nein, keine Keys werden angezeigt).
+
+---
+
+## 🧠 Wie JARVIS "denkt" (Function-Calling)
+
+JARVIS bekommt vom KI-Modell eine Liste von **Werkzeugen**. Das Modell
+entscheidet selbst, ob es direkt antwortet oder erst ein Werkzeug benutzt
+(z.B. Wetter holen, Notizen durchsuchen). Der Browser führt das Werkzeug aus,
+schickt das Ergebnis zurück, und das Modell antwortet damit. So bleibt alles
+sicher (Keys am Server) und JARVIS kann echte Aktionen ausführen.
+
+Rechts im HUD zeigt das **Aktivitäts-Log** live, was gerade passiert.
+
+## 📁 Aufbau
 ```
-index.html        Das HUD-Dashboard
-style.css         Aussehen (dunkel, cyan, Iron-Man-Stil)
+index.html        HUD + Login
+style.css         Aussehen
 js/
-  voice-viz.js    Der leuchtende Kreis in der Mitte
-  hud.js          Uhr, Wetter, Systeminfo, Status
-  main.js         Startet alles & verbindet später die Sprache
-api/
-  health.js       Test-Funktion (später: chat, tts, stt)
+  voice-viz.js    Arc-Reaktor-Visualizer (Mitte)
+  hud-fx.js       animierter Hintergrund (Gitter/Radar/Partikel) + Gauges
+  obsidian.js     Vault: suchen, ganze Notiz lesen, Statistik, schreiben
+  tools.js        11 Werkzeuge (Wetter, Suche, Notizen, Timer …)
+  app.js          Login, Agenten-Loop, Mikro, Wake-Word, Gedächtnis, Vault-Panel
+api/              SICHERE Server-Funktionen (Keys bleiben hier)
+  _lib.js         Passwort-Prüfung
+  chat.js         Gehirn (OpenAI, mit Function-Calling)
+  search.js       Websuche (DuckDuckGo, kein Key)
+  tts.js          Stimme raus (ElevenLabs)
+  stt.js          Stimme rein (Whisper)
+  health.js       Test
 ```
 
-## Schritte (Phasen)
-- [x] **Schritt 1** — HUD-Dashboard, live auf Vercel (kein Key nötig)
-- [ ] Schritt 2 — Gehirn (Text-Chat) + Obsidian-Zugriff
-- [ ] Schritt 3 — Stimme raus (ElevenLabs)
-- [ ] Schritt 4 — Stimme rein (Mikrofon + Whisper)
-- [ ] Schritt 5 — Wake-Word „Jarvis"
+## Funktionen
+- [x] Sicheres Hosting, Text + Sprache (Keys serverseitig + Passwort)
+- [x] Persönlichkeit (JARVIS kennt dich)
+- [x] **Timer & Erinnerungen** — "Erinner mich in 5 Minuten"
+- [x] **Wetter-Vorhersage** — "Wie ist das Wetter morgen?" (Open-Meteo, kein Key)
+- [x] **Obsidian-Notizen** — "Was steht in meinen Notizen über X?" (Browser fragt
+      einmal nach deinem Vault-Ordner; nur Chrome/Edge)
+- [x] **Wake-Word „Jarvis"** — Knopf 👂 anschalten, dann "Jarvis …" sagen.
+      Nutzt die eingebaute Chrome-Spracherkennung — **kein zusätzlicher Key nötig!**
+
+## Brauche ich neue Keys?
+Nein! Es bleiben dieselben 4 Vercel-Variablen wie vorher
+(`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `APP_PASSWORD`).
+Das Wake-Word läuft ohne extra Key.
