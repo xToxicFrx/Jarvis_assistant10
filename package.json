@@ -1,6 +1,11 @@
 {
   "name": "jarvis",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "description": "Jarvis - persoenlicher Planungs-Assistent fuer den Schulalltag (Vercel + vanilla JS, keine Build-Abhaengigkeiten).",
+  "scripts": {
+    "test": "node test/logic.mjs",
+    "test:dom": "node test/dom.mjs"
+  }
 }

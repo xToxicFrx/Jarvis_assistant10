@@ -1,0 +1,13 @@
+{
+  "name": "Jarvis",
+  "short_name": "Jarvis",
+  "description": "Dein persoenlicher Planungs-Assistent: Aufgaben, Hausaufgaben, Stundenplan, Erinnerungen.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#3b6df6",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
