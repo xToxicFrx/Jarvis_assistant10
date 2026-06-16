@@ -47,6 +47,7 @@ async function startJarvis() {
 
   await Store.init();
   UI.init();
+  try { fetch("/api/chat", { method: "GET" }); } catch (e) {} // Server vorwaermen, damit die erste Antwort schneller kommt
 
   const today = new Date();
   const systemPrompt = {
@@ -119,7 +120,7 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
     history.push({ role: "user", content: userText }); trimHistory();
     let rounds = 0;
     while (rounds++ < 6) {
-      const messages = [systemPrompt, { role: "system", content: "AKTUELLER STAND:\n" + Store.snapshot() }, ...sanitizeHistory(history)];
+      const messages = [systemPrompt, { role: "system", content: "AKTUELLER STAND:\n" + Store.snapshot() }, ...sanitizeHistory(history.slice(-16))];
       const { message } = await Auth.apiFetch("/api/chat", { json: { messages, tools: TOOL_SCHEMAS } });
       history.push(message); trimHistory();
       if (message.tool_calls && message.tool_calls.length) {
@@ -138,7 +139,9 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
   // ---- TTS ----
   // Kostenlose Notfall-Stimme: eingebaute Browser-Sprachausgabe (wenn ElevenLabs
   // nicht geht, z.B. Kontingent leer). Unbegrenzt, dafuer etwas einfacher.
-  let ttsWarned = false, elevenDown = false; // elevenDown: nach Kontingent-Fehler direkt Browser-Stimme (kein langsamer Fehlversuch mehr)
+  let ttsWarned = false;
+  // elevenDown: nach einem Kontingent-Fehler direkt Browser-Stimme (kein langsamer Fehlversuch). 24h gemerkt.
+  let elevenDown = (() => { try { const t = +(localStorage.getItem("jarvis_eleven_down") || 0); return !!t && (Date.now() - t < 86400000); } catch (e) { return false; } })();
   let currentAudio = null;     // laufende ElevenLabs-Audiowiedergabe
   let interactionId = 0;       // verwirft veraltete Antworten
   // Stoppt JEDE laufende Sprachausgabe sofort (ElevenLabs-Audio + Browser-Stimme).
@@ -192,7 +195,7 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
           if (currentAudio === audio) currentAudio = null;
         } catch (e) {
           // Bei leerem Kontingent kuenftig direkt Browser-Stimme nutzen (kein langsamer Fehlversuch mehr).
-          if (/quota/i.test(e.message)) { elevenDown = true; if (!ttsWarned) { ttsWarned = true; UI.toast("ElevenLabs-Kontingent leer - nutze Browser-Stimme.", "error"); } }
+          if (/quota/i.test(e.message)) { elevenDown = true; try { localStorage.setItem("jarvis_eleven_down", String(Date.now())); } catch (er) {} if (!ttsWarned) { ttsWarned = true; UI.toast("ElevenLabs-Kontingent leer - nutze Browser-Stimme.", "error"); } }
           await browserSpeak(text);
         }
       }
@@ -234,15 +237,38 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
     catch (e) { console.error(e); UI.setVoiceState("idle"); UI.toast(e.message, "error"); relistenWake(); }
   }
   function blobToBase64(blob) { return new Promise((resolve) => { const r = new FileReader(); r.onloadend = () => resolve(r.result.split(",")[1]); r.readAsDataURL(blob); }); }
+  // ---- Browser-Spracherkennung (schnell, ohne Upload) mit Whisper-Fallback ----
+  const STT_BROWSER = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  let cmdRec = null, listening = false;
+  function startListen() {
+    if (listening || micActive) return;
+    stopSpeaking(); interactionId++;
+    const S = window.SpeechRecognition || window.webkitSpeechRecognition;
+    try { cmdRec = new S(); } catch (e) { startMic(); return; }
+    cmdRec.lang = "de-DE"; cmdRec.interimResults = true; cmdRec.continuous = false; cmdRec.maxAlternatives = 1;
+    listening = true; micActive = true; // blockiert den Wake-Recognizer
+    $("micBtn").classList.add("recording"); UI.setVoiceState("listening");
+    try { if (recognition) recognition.stop(); } catch (e) {}
+    let finalText = "";
+    cmdRec.onresult = (e) => { let interim = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; } UI.setTranscript("Du", (finalText + interim) || "..."); };
+    cmdRec.onerror = () => {};
+    cmdRec.onend = () => { listening = false; micActive = false; cmdRec = null; $("micBtn").classList.remove("recording"); const txt = finalText.trim(); if (txt) { relistenWake(); run(txt); } else { UI.setVoiceState("idle"); relistenWake(); } };
+    try { cmdRec.start(); } catch (e) { listening = false; micActive = false; cmdRec = null; $("micBtn").classList.remove("recording"); UI.setVoiceState("idle"); }
+  }
+  function stopListen() { if (cmdRec) { try { cmdRec.stop(); } catch (e) {} } }
+  function inputStart() { if (STT_BROWSER) startListen(); else startMic(); }
+  function inputStop() { if (STT_BROWSER) stopListen(); else stopMic(); }
+  function wakeListen() { if (STT_BROWSER) startListen(); else { startMic(); setTimeout(() => { if (micActive) stopMic(); }, 4500); } }
+
   const micBtn = $("micBtn");
-  micBtn.addEventListener("mousedown", startMic);
-  micBtn.addEventListener("mouseup", stopMic);
-  micBtn.addEventListener("mouseleave", () => { if (micActive) stopMic(); });
-  micBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startMic(); });
-  micBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopMic(); });
+  micBtn.addEventListener("mousedown", inputStart);
+  micBtn.addEventListener("mouseup", inputStop);
+  micBtn.addEventListener("mouseleave", () => { if (listening || micActive) inputStop(); });
+  micBtn.addEventListener("touchstart", (e) => { e.preventDefault(); inputStart(); });
+  micBtn.addEventListener("touchend", (e) => { e.preventDefault(); inputStop(); });
   function isTyping() { const a = document.activeElement; return a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT" || a.isContentEditable); }
-  document.addEventListener("keydown", (e) => { if (e.code === "Space" && !isTyping() && !document.querySelector(".modal-back")) { e.preventDefault(); startMic(); } });
-  document.addEventListener("keyup", (e) => { if (e.code === "Space" && !isTyping()) stopMic(); });
+  document.addEventListener("keydown", (e) => { if (e.code === "Space" && !isTyping() && !document.querySelector(".modal-back")) { e.preventDefault(); inputStart(); } });
+  document.addEventListener("keyup", (e) => { if (e.code === "Space" && !isTyping()) inputStop(); });
 
   // ---- Wake-Word ("Jarvis") ----
   let recognition = null, wakeOn = false;
@@ -252,7 +278,7 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { const b = $("wakeBtn"); if (b) { b.disabled = true; b.title = "Wake-Word braucht Chrome/Edge"; } return; }
     recognition = new SR(); recognition.lang = "de-DE"; recognition.continuous = true; recognition.interimResults = true;
-    recognition.onresult = (e) => { if (micActive) return; const txt = Array.from(e.results).map((r) => r[0].transcript).join(" ").toLowerCase(); if (/(jarvis|jervis|dscharvis|tscharvis)/.test(txt)) { try { recognition.stop(); } catch (er) {} UI.toast("Wake-Word erkannt"); startMic(); setTimeout(() => { if (micActive) stopMic(); }, 4500); } };
+    recognition.onresult = (e) => { if (micActive) return; const txt = Array.from(e.results).map((r) => r[0].transcript).join(" ").toLowerCase(); if (/(jarvis|jervis|dscharvis|tscharvis)/.test(txt)) { try { recognition.stop(); } catch (er) {} UI.toast("Wake-Word erkannt"); wakeListen(); } };
     recognition.onend = () => relistenWake();
     recognition.onerror = () => {};
   })();

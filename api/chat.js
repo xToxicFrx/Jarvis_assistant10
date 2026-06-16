@@ -8,6 +8,7 @@ import { requireAuth, methodGuard, sendJson, getClientIp, getBody } from "./_lib
 import { rateLimit } from "./_ratelimit.js";
 
 export default async function handler(req, res) {
+  if (req.method === "GET") return sendJson(res, 200, { warm: true }); // Aufwaermen (Cold-Start vermeiden)
   if (!methodGuard(req, res, ["POST"])) return;
   if (!requireAuth(req, res)) return;
 
@@ -25,7 +26,7 @@ export default async function handler(req, res) {
     if (JSON.stringify(messages).length > 300000) return sendJson(res, 413, { error: "Anfrage zu gross." });
     const tools = Array.isArray(body.tools) ? body.tools.slice(0, 40) : null;
 
-    const payload = { model: process.env.LLM_MODEL || "gpt-4o-mini", messages, temperature: 0.7, max_tokens: 700 };
+    const payload = { model: process.env.LLM_MODEL || "gpt-4o-mini", messages, temperature: 0.6, max_tokens: 450 };
     if (tools && tools.length) { payload.tools = tools; payload.tool_choice = "auto"; }
 
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
