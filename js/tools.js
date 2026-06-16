@@ -90,6 +90,7 @@ const TOOL_SCHEMAS = [
   { type: "function", function: { name: "pomodoro_stop", description: "Lern-Timer stoppen/zuruecksetzen.", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "pomodoro_status", description: "Status des Lern-Timers.", parameters: { type: "object", properties: {} } } },
 
+  { type: "function", function: { name: "grade_goal", description: "Berechnet, welche Note in der naechsten Arbeit noetig ist, um einen Wunsch-Schnitt in einem Fach zu erreichen.", parameters: { type: "object", properties: { subject: { type: "string" }, target: { type: "number", description: "Wunsch-Schnitt, z.B. 2.0" }, weight: { type: "number", description: "Gewicht der naechsten Note (z.B. 2 fuer Klassenarbeit), Standard 1." } }, required: ["subject", "target"] } } },
   { type: "function", function: { name: "add_vocab", description: "Vokabel-Karte anlegen (Vorderseite und Rueckseite).", parameters: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"] } } },
   { type: "function", function: { name: "list_vocab", description: "Wie viele Vokabeln es gibt und wie viele faellig sind.", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "add_money", description: "Einnahme oder Ausgabe (Taschengeld) eintragen.", parameters: { type: "object", properties: { amount: { type: "number" }, label: { type: "string" }, type: { type: "string", enum: ["income", "expense"] } }, required: ["amount", "type"] } } },
@@ -145,6 +146,14 @@ async function runTool(name, args, ctx) {
     case "pomodoro_stop": { Store.pomodoroReset(); return "Lern-Timer gestoppt."; }
     case "pomodoro_status": { const p = Store.get().pomodoro; if (!p.running && p.phase === "idle") return "Der Lern-Timer laeuft gerade nicht."; const left = Math.round((window.Pomodoro ? Pomodoro.remainingMs() : Math.max(0, p.endsAt - Date.now())) / 60000); return `Phase: ${Pomodoro ? Pomodoro.phaseLabel(p.phase) : p.phase}, noch ca. ${left} min.`; }
 
+    case "grade_goal": {
+      const subject = String(args.subject || "").trim(); const target = Number(args.target); const weight = Number(args.weight) || 1;
+      if (!subject || !(target >= 1 && target <= 6)) return "Bitte Fach und Wunsch-Schnitt (1-6) angeben.";
+      const cur = Store.subjectAverage(subject); const needed = Store.neededGrade(subject, target, weight);
+      if (needed >= 6) return `Um in ${subject} einen Schnitt von ${target} zu halten, reicht selbst eine 6 (Gewicht ${weight}). Aktueller Schnitt: ${cur != null ? cur : "noch keine Noten"}.`;
+      if (needed < 1) return `Ein Schnitt von ${target} ist in ${subject} mit einer einzelnen Note (Gewicht ${weight}) nicht mehr erreichbar. Aktueller Schnitt: ${cur != null ? cur : "noch keine Noten"}.`;
+      return `Um in ${subject} einen Schnitt von ${target} zu erreichen, brauchst du in der naechsten Arbeit (Gewicht ${weight}) mindestens eine ${needed} (oder besser). Aktueller Schnitt: ${cur != null ? cur : "noch keine Noten"}.`;
+    }
     case "add_vocab": { const c = Store.addVocab({ front: args.front, back: args.back }); return `Vokabel gespeichert: ${c.front} = ${c.back}.`; }
     case "list_vocab": { const due = Store.vocabDue().length, total = Store.get().vocab.length; return `${total} Vokabeln, davon ${due} faellig.`; }
     case "add_money": { const e = Store.addBudgetEntry({ amount: args.amount, label: args.label, type: args.type }); return `${e.amount >= 0 ? "Einnahme" : "Ausgabe"} ${Math.abs(e.amount)} EUR${e.label ? " (" + e.label + ")" : ""} gebucht. Kontostand: ${Store.balance()} EUR.`; }

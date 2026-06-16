@@ -258,6 +258,12 @@ window.Store = (function () {
   function subjectAverages() { const map = {}; gradeSubjects().forEach((s) => { map[s] = subjectAverage(s); }); return map; }
   function gradeSubjects() { return [...new Set(state.grades.map((g) => g.subject))].sort(); }
   function overallAverage() { const a = subjectAverages(); const vals = Object.values(a).filter((x) => x != null); if (!vals.length) return null; return U.round(vals.reduce((x, y) => x + y, 0) / vals.length, 2); }
+  // Notenziel-Rechner: gewichtete Summe/Gewicht eines Fachs.
+  function gradeSumWeight(subject) { let sum = 0, w = 0; state.grades.filter((g) => g.subject === subject).forEach((g) => { sum += g.value * (g.weight || 1); w += (g.weight || 1); }); return { sum, w }; }
+  // Welche Note (Hoechstwert) brauchst du in der naechsten Arbeit (Gewicht), um Ziel-Schnitt zu erreichen?
+  function neededGrade(subject, target, weight) { const { sum, w } = gradeSumWeight(subject); weight = Number(weight) || 1; return U.round((Number(target) * (w + weight) - sum) / weight, 2); }
+  // Welcher Schnitt ergibt sich, wenn die naechste Note "value" (Gewicht) ist?
+  function projectedAverage(subject, value, weight) { const { sum, w } = gradeSumWeight(subject); weight = Number(weight) || 1; return U.round((sum + Number(value) * weight) / (w + weight), 2); }
 
   // ============================================================
   // Tests / Klassenarbeiten
@@ -443,7 +449,7 @@ window.Store = (function () {
     // timetable
     dayKey, setTimetableEntry, removeTimetableEntry,
     // grades
-    addGrade, removeGrade, subjectAverage, subjectAverages, gradeSubjects, overallAverage,
+    addGrade, removeGrade, subjectAverage, subjectAverages, gradeSubjects, overallAverage, neededGrade, projectedAverage,
     // exams
     addExam, removeExam, upcomingExams,
     // habits

@@ -49,6 +49,8 @@ ok(threw, "Falsches Passwort entschluesselt NICHT");
 const ymd = Utils.todayYMD();
 Store.addGrade({ subject: "Mathe", value: 2 }); Store.addGrade({ subject: "Mathe", value: 1 });
 ok(Store.subjectAverage("Mathe") === 1.5, "Notenschnitt 1.5");
+ok(Store.neededGrade("Mathe", 2, 1) === 3, "Notenziel: braucht eine 3 fuer Schnitt 2");
+ok(Store.projectedAverage("Mathe", 3, 1) === 2, "Notenziel: Projektion ergibt 2.0");
 await runTool("add_homework", { subject: "Bio", title: "AB", due: Utils.ymd(Utils.addDays(new Date(), 2)) }, {});
 ok(Store.get().tasks.some((t) => t.type === "homework"), "Hausaufgabe via Werkzeug");
 const rt = Store.addTask({ title: "Mappe", due: ymd, repeat: { freq: "daily" } });

@@ -183,6 +183,7 @@ window.UI = (function () {
     const { card, head, body } = cardShell("Noten", "i-award");
     const avg = Store.overallAverage();
     if (avg != null) head.appendChild(el("span", { class: "count-pill strong", text: "Ø " + avg }));
+    head.appendChild(iconBtn("i-target", "Notenziel rechnen", () => openGradeGoalModal()));
     head.appendChild(iconBtn("i-plus", "Note eintragen", openGradeModal));
     card.appendChild(body);
     if (!s.grades.length) { body.appendChild(empty("Noch keine Noten.")); return card; }
@@ -383,6 +384,34 @@ window.UI = (function () {
     list.forEach((g) => body.appendChild(el("div", { class: "grade-item" }, [el("span", { class: "grade-val", text: String(g.value) }), el("span", { class: "muted", text: (g.label || "") + (g.weight !== 1 ? ` ·×${g.weight}` : "") + " · " + g.date }), iconBtn("i-trash", "Loeschen", () => { Store.removeGrade(g.id); closeModal(); toast("Geloescht"); })])));
     body.appendChild(el("div", { class: "modal-actions" }, el("button", { class: "btn btn-block", type: "button", text: "Schliessen", onclick: closeModal })));
     openModal("Noten: " + subject, body);
+  }
+
+  function openGradeGoalModal(prefillSubject) {
+    const subjects = Store.gradeSubjects();
+    const list = el("datalist", { id: "goalSubjects" }, subjects.map((x) => el("option", { value: x })));
+    const subjI = el("input", { type: "text", list: "goalSubjects", placeholder: "Fach", value: prefillSubject || subjects[0] || "" });
+    const targetI = el("input", { type: "number", min: "1", max: "6", step: "0.25", value: "2" });
+    const weightI = el("input", { type: "number", min: "0.5", max: "5", step: "0.5", value: "2" });
+    const result = el("div", { class: "goal-result" });
+    function calc() {
+      const subject = subjI.value.trim(), target = Number(targetI.value), weight = Number(weightI.value) || 1;
+      clear(result);
+      if (!subject || !(target >= 1 && target <= 6)) { result.appendChild(el("div", { class: "muted", text: "Fach und Wunsch-Schnitt (1-6) eingeben." })); return; }
+      const cur = Store.subjectAverage(subject), needed = Store.neededGrade(subject, target, weight);
+      let msg, cls;
+      if (needed >= 6) { msg = "Selbst eine 6 reicht - du haeltst den Schnitt locker."; cls = "ok"; }
+      else if (needed < 1) { msg = "Mit einer einzelnen Note nicht mehr erreichbar (selbst eine 1 reicht nicht)."; cls = "bad"; }
+      else { msg = `Du brauchst mindestens eine ${needed} (oder besser).`; cls = needed >= 4 ? "bad" : needed >= 2.5 ? "warn" : "ok"; }
+      result.appendChild(el("div", { class: "goal-needed " + cls, text: msg }));
+      result.appendChild(el("div", { class: "muted small", text: `Aktueller Schnitt in ${subject}: ${cur != null ? cur : "noch keine Noten"} · Gewicht: ${weight}` }));
+      result.appendChild(el("div", { class: "muted small", text: "Schnitt je naechster Note:" }));
+      const table = el("div", { class: "goal-table" });
+      [1, 2, 3, 4, 5, 6].forEach((g) => table.appendChild(el("div", { class: "goal-cell" }, [el("b", { text: String(g) }), el("span", { text: "→ " + Store.projectedAverage(subject, g, weight) })])));
+      result.appendChild(table);
+    }
+    [subjI, targetI, weightI].forEach((i) => i.addEventListener("input", calc));
+    openModal("Notenziel-Rechner", el("div", { class: "modal-body" }, [list, field("Fach", subjI), el("div", { class: "field-row" }, [field("Wunsch-Schnitt", targetI), field("Gewicht naechste Note", weightI)]), result, el("div", { class: "modal-actions" }, el("button", { class: "btn btn-block", type: "button", text: "Schliessen", onclick: closeModal }))]));
+    calc();
   }
 
   function openExamModal() {
@@ -594,6 +623,7 @@ window.UI = (function () {
       { id: "add-homework", label: "Neue Hausaufgabe", icon: "i-book", run: () => openTaskModal("homework") },
       { id: "add-note", label: "Neue Notiz", icon: "i-note", run: () => openNoteModal() },
       { id: "add-grade", label: "Note eintragen", icon: "i-award", run: openGradeModal },
+      { id: "grade-goal", label: "Notenziel rechnen", icon: "i-target", run: () => openGradeGoalModal() },
       { id: "add-exam", label: "Test eintragen", icon: "i-clipboard", run: openExamModal },
       { id: "add-event", label: "Termin anlegen", icon: "i-calendar", run: openEventModal },
       { id: "add-habit", label: "Gewohnheit anlegen", icon: "i-flame", run: openHabitModal },
