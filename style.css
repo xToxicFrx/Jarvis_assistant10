@@ -214,6 +214,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 /* Assistent */
 .assistant { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
 .assistant-inner { max-width: 900px; margin: 0 auto; }
+.orb-wrap { display: flex; justify-content: center; align-items: center; max-height: 0; opacity: 0; overflow: hidden; transition: max-height .25s ease, opacity .25s ease; }
+.orb-wrap.show { max-height: 150px; opacity: 1; margin-bottom: 6px; }
+.orb { width: 130px; height: 130px; }
 .transcript { font-size: 13px; margin: 0 6px 8px; min-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .transcript b { color: var(--text); }
 .assistant-row { display: flex; align-items: center; gap: 6px; }
 .assistant-row #textInput { flex: 1; min-width: 0; padding: 11px 14px; font: inherit; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); outline: none; }

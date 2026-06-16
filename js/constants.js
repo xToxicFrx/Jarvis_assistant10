@@ -12,6 +12,8 @@ window.CONST = {
     "Politik", "Religion", "Ethik", "Kunst", "Musik", "Sport", "WAT", "NWT",
   ],
 
+  CURRENCY: "¥", // Chinesischer Yuan (RMB)
+
   PRIORITIES: ["low", "med", "high"],
   PRIORITY_LABELS: { low: "Niedrig", med: "Mittel", high: "Hoch" },
 
@@ -47,6 +49,7 @@ window.CONST = {
     accent: "blue",
     wakeOnStart: false,
     encryptCloud: true,     // Zero-Knowledge: Cloud-Daten verschluesseln
+    voiceMode: "auto",      // auto (ElevenLabs, sonst Browser) | browser | off
     notifications: true,
     briefingEnabled: true,
     briefingSpeak: true,

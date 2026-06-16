@@ -13,7 +13,7 @@ catch (e) { console.log("jsdom nicht installiert - DOM-Test uebersprungen (npm i
 import fs from "node:fs";
 const html = fs.readFileSync("index.html", "utf8").replace(/<script[\s\S]*?<\/script>/g, "");
 const errors = [];
-const vc = new VirtualConsole(); vc.on("jsdomError", (e) => errors.push("jsdomError: " + (e.detail || e.message)));
+const vc = new VirtualConsole(); vc.on("jsdomError", (e) => { const msg = String((e && (e.detail || e.message)) || ""); if (/getContext/.test(msg)) return; /* jsdom hat kein Canvas; Orb no-opt im Browser ok */ errors.push("jsdomError: " + msg); });
 const dom = new JSDOM(html, { url: "https://localhost/", pretendToBeVisual: true, runScripts: "outside-only", virtualConsole: vc });
 const { window } = dom;
 window.matchMedia = () => ({ matches: false, addEventListener() {}, addListener() {} });
@@ -38,7 +38,7 @@ window.localStorage.setItem("jarvis_history", JSON.stringify([
   { role: "user", content: "noch da?" },
 ]));
 
-const files = ["constants", "utils", "crypto", "auth", "store", "reminders", "pomodoro", "charts", "calendar", "search", "tools", "ui", "shortcuts", "onboarding", "app"];
+const files = ["constants", "utils", "crypto", "auth", "store", "reminders", "pomodoro", "charts", "calendar", "voiceorb", "search", "tools", "ui", "shortcuts", "onboarding", "app"];
 let fail = 0; const ok = (c, m) => { console.log((c ? "PASS" : "FAIL") + " " + m); if (!c) fail++; };
 try { window.eval(files.map((f) => fs.readFileSync("js/" + f + ".js", "utf8")).join("\n;\n")); } catch (e) { errors.push("eval: " + e.message); }
 await new Promise((r) => setTimeout(r, 150));

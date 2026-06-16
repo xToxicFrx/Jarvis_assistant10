@@ -435,7 +435,7 @@ window.Store = (function () {
     if (state.pomodoro.running) L.push("POMODORO laeuft gerade (" + state.pomodoro.phase + ").");
     if (focusToday()) L.push(`FOKUSZEIT heute: ${focusToday()} min.`);
     const vd = vocabDue().length; if (vd) L.push(`VOKABELN faellig: ${vd}`);
-    if (state.budget.length) L.push(`KONTOSTAND: ${balance()} EUR`);
+    if (state.budget.length) L.push(`KONTOSTAND: ${balance()} ${CONST.CURRENCY}`);
     if (L.length === 1) L.push("Noch keine Eintraege.");
     return L.join("\n");
   }
