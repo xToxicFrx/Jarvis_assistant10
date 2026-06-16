@@ -73,16 +73,41 @@ sicher (Keys am Server) und JARVIS kann echte Aktionen ausführen.
 
 Rechts im HUD zeigt das **Aktivitäts-Log** live, was gerade passiert.
 
+## 🧭 Decision Engine — „Was soll ich jetzt tun?"
+
+Manchmal ist die schwerste Frage nicht *wie*, sondern *was überhaupt*. Dafür
+gibt es die **Decision Engine** (Knopf `🧭 ENTSCHEIDEN` oder `Strg+D`, oder
+sag einfach „Jarvis, was soll ich jetzt tun?").
+
+So funktioniert sie:
+
+1. **Erfassen** — du gibst in drei Klicks an: Energie-Level, freie Zeit und
+   Stimmung/Fokus (plus optional ein freier Hinweis).
+2. **Analysieren** — JARVIS bewertet jede mögliche Aktivität anhand von sechs
+   Faktoren: **Energie-Match, Zeit-Fit, Tageszeit, Stimmung, Priorität und
+   Wetter**. Mit dabei: ein kuratierter Aktivitäten-Pool *und* deine echten
+   **offenen Aufgaben** aus dem Obsidian-Vault (`- [ ]`). Aufgaben mit Frist
+   („bis morgen") werden nach oben geholt.
+3. **Ergebnis** — die Top-Empfehlung mit **Confidence-Ring**, einer
+   nachvollziehbaren **Faktor-Aufschlüsselung** (warum genau das?) und
+   anklickbaren Alternativen. Mit `▶ LOS GEHT'S` startet direkt ein
+   Fokus-Timer, `💾 NOTIEREN` schreibt die Entscheidung in deine Daily Note.
+
+Das Besondere: Die Engine rät nicht zufällig, sondern **erklärt jede
+Empfehlung** – deterministisch, transparent und ganz ohne zusätzlichen Key.
+
 ## 📁 Aufbau
 ```
 index.html        HUD + Login
 style.css         Aussehen
 js/
-  voice-viz.js    Arc-Reaktor-Visualizer (Mitte)
-  hud-fx.js       animierter Hintergrund (Gitter/Radar/Partikel) + Gauges
-  obsidian.js     Vault: suchen, ganze Notiz lesen, Statistik, schreiben
-  tools.js        11 Werkzeuge (Wetter, Suche, Notizen, Timer …)
-  app.js          Login, Agenten-Loop, Mikro, Wake-Word, Gedächtnis, Vault-Panel
+  voice-viz.js       Arc-Reaktor-Visualizer (Mitte)
+  hud-fx.js          animierter Hintergrund (Gitter/Radar/Partikel) + Gauges
+  obsidian.js        Vault: suchen, lesen, Statistik, schreiben, offene Aufgaben
+  decision-engine.js erklärbare Scoring-Engine ("Was soll ich jetzt tun?")
+  decision-ui.js     HUD-Overlay der Decision Engine (Erfassen → Analyse → Ergebnis)
+  tools.js           12 Werkzeuge (Wetter, Suche, Notizen, Timer, Decision Engine …)
+  app.js             Login, Agenten-Loop, Mikro, Wake-Word, Gedächtnis, Vault-Panel
 api/              SICHERE Server-Funktionen (Keys bleiben hier)
   _lib.js         Passwort-Prüfung
   chat.js         Gehirn (OpenAI, mit Function-Calling)
@@ -101,6 +126,8 @@ api/              SICHERE Server-Funktionen (Keys bleiben hier)
       einmal nach deinem Vault-Ordner; nur Chrome/Edge)
 - [x] **Wake-Word „Jarvis"** — Knopf 👂 anschalten, dann "Jarvis …" sagen.
       Nutzt die eingebaute Chrome-Spracherkennung — **kein zusätzlicher Key nötig!**
+- [x] **Decision Engine** — „Was soll ich jetzt tun?" (`🧭`/`Strg+D`). Erklärbare
+      Empfehlung aus Energie, Zeit, Stimmung, Tageszeit, Wetter & offenen Aufgaben.
 
 ## Brauche ich neue Keys?
 Nein! Es bleiben dieselben 4 Vercel-Variablen wie vorher

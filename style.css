@@ -277,3 +277,213 @@ body {
   100% { box-shadow: 0 0 0 0 #ffb83000; }
 }
 .panel.flash-save { animation: flash-save 0.8s ease-out; }
+
+/* ============================================================
+   DECISION ENGINE — "Was soll ich jetzt tun?"
+   ============================================================ */
+
+/* Launch-Knopf im Footer — der Held unter den Knöpfen */
+#decisionBtn {
+  background: linear-gradient(135deg, #2ff3ff14, #2ff3ff05);
+  border: 1px solid var(--cyan);
+  color: var(--cyan-bright);
+  padding: 7px 14px; font-family: monospace; font-size: 11px; letter-spacing: 2px;
+  cursor: pointer; border-radius: 2px; transition: .2s; white-space: nowrap;
+  box-shadow: 0 0 10px #2ff3ff22, inset 0 0 12px #2ff3ff10;
+  animation: dz-breathe 3.5s ease-in-out infinite;
+}
+#decisionBtn:hover {
+  background: #2ff3ff2a; box-shadow: 0 0 20px #2ff3ff66, inset 0 0 16px #2ff3ff22;
+  color: #fff; transform: translateY(-1px);
+}
+@keyframes dz-breathe {
+  0%,100% { box-shadow: 0 0 10px #2ff3ff22, inset 0 0 12px #2ff3ff10; }
+  50% { box-shadow: 0 0 18px #2ff3ff44, inset 0 0 16px #2ff3ff1c; }
+}
+
+/* Overlay + Fenster */
+.dz-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: radial-gradient(ellipse at 50% 30%, #04223bdd 0%, #020912f2 70%);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(3px);
+  animation: dz-fade .25s ease-out;
+}
+@keyframes dz-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.dz-window {
+  position: relative;
+  width: 92%; max-width: 640px; max-height: 90vh; overflow-y: auto;
+  background: linear-gradient(180deg, #06182bf2, #04101cf2);
+  border: 1px solid var(--cyan); border-radius: 5px;
+  box-shadow: 0 0 60px #2ff3ff33, inset 0 0 40px #2ff3ff0a;
+  padding: 20px 22px 22px;
+  animation: dz-pop .32s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes dz-pop { from { transform: scale(.9) translateY(14px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+.dz-window::-webkit-scrollbar { width: 5px; }
+.dz-window::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
+
+/* Kopf */
+.dz-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.dz-title { font-size: 16px; letter-spacing: 4px; text-shadow: 0 0 16px var(--cyan); color: var(--cyan-bright); }
+.dz-sub { font-size: 9px; letter-spacing: 2px; color: var(--cyan-dim); margin-left: 8px; }
+.dz-x {
+  background: transparent; border: 1px solid var(--cyan-dim); color: var(--cyan);
+  width: 28px; height: 28px; cursor: pointer; border-radius: 3px; font-size: 13px; transition: .15s;
+}
+.dz-x:hover { background: #ff4a4a22; border-color: var(--red); color: var(--red); }
+
+/* Kontext-Chips */
+.dz-context { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--cyan-faint); }
+.dz-ctx {
+  font-size: 10px; letter-spacing: 1px; color: var(--cyan-bright);
+  border: 1px solid var(--cyan-faint); border-radius: 20px; padding: 4px 11px;
+  background: #2ff3ff0c;
+}
+
+/* Schritt-Container */
+.dz-step { animation: dz-fade .3s ease-out; }
+
+/* Frage-Block */
+.dz-q { margin-bottom: 16px; }
+.dz-q > label {
+  display: block; font-size: 10px; letter-spacing: 3px; color: var(--cyan-dim);
+  margin-bottom: 8px; text-transform: uppercase;
+}
+.dz-q > label::before { content: "▸ "; color: var(--cyan); }
+.dz-opt { color: var(--cyan-faint); letter-spacing: 1px; font-size: 8px; border: 1px solid var(--cyan-faint); padding: 1px 5px; border-radius: 8px; }
+
+/* Segment-Schalter */
+.dz-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.dz-chip {
+  flex: 1 1 auto; min-width: fit-content;
+  background: #04121f; border: 1px solid var(--cyan-dim); color: var(--cyan-dim);
+  padding: 9px 10px; font-family: monospace; font-size: 11px; letter-spacing: 1px;
+  cursor: pointer; border-radius: 3px; transition: .18s; white-space: nowrap;
+}
+.dz-chip:hover { border-color: var(--cyan); color: var(--cyan); background: #2ff3ff10; }
+.dz-chip.on {
+  border-color: var(--cyan); color: #02121f; font-weight: bold;
+  background: linear-gradient(180deg, var(--cyan-bright), var(--cyan));
+  box-shadow: 0 0 16px #2ff3ff66;
+}
+
+/* Freitext */
+.dz-note {
+  width: 100%; background: #04121f; border: 1px solid var(--cyan-dim); color: var(--cyan);
+  padding: 10px 12px; font-family: monospace; font-size: 12px; border-radius: 3px; outline: none;
+}
+.dz-note:focus { border-color: var(--cyan); box-shadow: 0 0 12px #2ff3ff44; }
+.dz-note::placeholder { color: var(--cyan-faint); }
+
+/* Analysieren-Knopf */
+.dz-analyze {
+  width: 100%; margin-top: 6px; padding: 13px;
+  background: linear-gradient(180deg, #2ff3ff22, #2ff3ff08);
+  border: 1px solid var(--cyan); color: var(--cyan-bright);
+  font-family: monospace; font-size: 13px; letter-spacing: 5px; cursor: pointer;
+  border-radius: 3px; transition: .2s; text-shadow: 0 0 10px var(--cyan);
+}
+.dz-analyze:hover { background: #2ff3ff33; box-shadow: 0 0 26px #2ff3ff55; color: #fff; }
+
+/* ---- Analyse-Schritt ---- */
+.dz-analyzing { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
+#dzScanner { filter: drop-shadow(0 0 14px #2ff3ff44); }
+.dz-scan-label {
+  margin-top: 10px; font-size: 12px; letter-spacing: 4px; color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan); animation: pulse 1.4s infinite;
+}
+.dz-scan-feed { width: 100%; margin-top: 16px; display: flex; flex-direction: column; gap: 5px; }
+.dz-feed-line {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--cyan-dim); padding: 6px 10px;
+  border: 1px solid var(--cyan-faint); border-radius: 3px; background: #2ff3ff06;
+  opacity: 0; transform: translateX(-12px); transition: .3s;
+}
+.dz-feed-line.in { opacity: 1; transform: translateX(0); }
+.dz-feed-pct { color: var(--cyan); font-weight: bold; }
+
+/* ---- Ergebnis-Schritt ---- */
+.dz-rec {
+  display: flex; gap: 16px; align-items: center; justify-content: space-between;
+  padding: 16px; border: 1px solid var(--cyan-dim); border-radius: 4px;
+  background: linear-gradient(135deg, #2ff3ff12, #2ff3ff04);
+  box-shadow: inset 0 0 24px #2ff3ff0a;
+}
+.dz-rec-main { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+.dz-rec-icon { font-size: 40px; line-height: 1; filter: drop-shadow(0 0 10px #2ff3ff66); flex-shrink: 0; }
+.dz-rec-text { min-width: 0; }
+.dz-rec-kicker { font-size: 9px; letter-spacing: 3px; color: var(--amber); margin-bottom: 3px; }
+.dz-rec-label { font-size: 18px; color: #fff; letter-spacing: 1px; text-shadow: 0 0 14px var(--cyan); line-height: 1.2; }
+.dz-rec-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.dz-pill { font-size: 9px; letter-spacing: 1px; color: var(--cyan); border: 1px solid var(--cyan-faint); border-radius: 10px; padding: 2px 8px; }
+.dz-pill-amber { color: var(--amber); border-color: #ffb83055; }
+.dz-rec-why { font-size: 11px; color: var(--cyan-dim); line-height: 1.5; }
+.dz-rec-conf { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+#dzConf { filter: drop-shadow(0 0 8px #2ff3ff33); }
+.dz-conf-cap { font-size: 8px; letter-spacing: 3px; color: var(--cyan-dim); }
+
+/* Faktor-Balken */
+.dz-factors-title, .dz-alts-title {
+  font-size: 10px; letter-spacing: 3px; color: var(--cyan-bright);
+  margin: 18px 0 10px; padding-bottom: 5px; border-bottom: 1px solid var(--cyan-faint);
+}
+.dz-factors-title::before, .dz-alts-title::before { content: "▸ "; color: var(--cyan); }
+.dz-factor { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dz-factor-label { font-size: 10px; color: var(--cyan-dim); width: 96px; flex-shrink: 0; letter-spacing: 1px; }
+.dz-factor-track { flex: 1; height: 7px; background: #2ff3ff14; border-radius: 4px; overflow: hidden; }
+.dz-factor-fill {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, var(--cyan), var(--cyan-bright));
+  box-shadow: 0 0 8px #2ff3ff66; border-radius: 4px;
+  transition: width .9s cubic-bezier(.2,.8,.2,1);
+}
+.dz-factor-fill.high { background: linear-gradient(90deg, #2ff3ff, var(--green)); box-shadow: 0 0 8px #39ff8766; }
+.dz-factor-fill.low { background: linear-gradient(90deg, #ffb830, #ff4a4a); box-shadow: 0 0 8px #ffb83055; }
+.dz-factor-val { font-size: 10px; color: var(--cyan); width: 24px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Alternativen */
+.dz-alts { display: flex; flex-direction: column; gap: 6px; }
+.dz-alt {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  background: #04121f; border: 1px solid var(--cyan-faint); color: var(--cyan);
+  padding: 9px 12px; border-radius: 3px; cursor: pointer; transition: .15s; font-family: monospace;
+}
+.dz-alt:hover { border-color: var(--cyan); background: #2ff3ff12; transform: translateX(3px); }
+.dz-alt-icon { font-size: 18px; flex-shrink: 0; }
+.dz-alt-label { flex: 1; font-size: 12px; color: var(--cyan-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dz-alt:hover .dz-alt-label { color: var(--cyan); }
+.dz-alt-pct { font-size: 11px; color: var(--cyan); font-weight: bold; flex-shrink: 0; }
+
+/* Aktionen */
+.dz-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.dz-go {
+  flex: 1 1 100%; padding: 13px;
+  background: linear-gradient(180deg, #39ff8722, #39ff8708);
+  border: 1px solid var(--green); color: var(--green);
+  font-family: monospace; font-size: 14px; letter-spacing: 5px; cursor: pointer;
+  border-radius: 3px; transition: .2s; text-shadow: 0 0 10px var(--green);
+}
+.dz-go:hover { background: #39ff8733; box-shadow: 0 0 26px #39ff8755; color: #fff; }
+.dz-btn {
+  flex: 1 1 30%; padding: 10px;
+  background: transparent; border: 1px solid var(--cyan-dim); color: var(--cyan);
+  font-family: monospace; font-size: 11px; letter-spacing: 1px; cursor: pointer;
+  border-radius: 3px; transition: .2s; white-space: nowrap;
+}
+.dz-btn:hover { background: #2ff3ff18; border-color: var(--cyan); box-shadow: 0 0 12px #2ff3ff33; }
+.dz-go-confirm {
+  flex: 1 1 100%; text-align: center; padding: 14px;
+  border: 1px solid var(--green); border-radius: 3px; color: var(--green);
+  font-size: 13px; letter-spacing: 3px; text-shadow: 0 0 12px var(--green);
+  background: #39ff8714; animation: pulse 1.2s infinite;
+}
+
+/* Schmaler: Knöpfe stapeln */
+@media (max-width: 520px) {
+  .dz-chip { flex: 1 1 40%; }
+  .dz-rec { flex-direction: column; align-items: flex-start; }
+  .dz-rec-conf { flex-direction: row; align-self: center; }
+  .dz-btn { flex: 1 1 100%; }
+}

@@ -205,6 +205,36 @@ const Obsidian = (() => {
     return { notes: files.length, folders: folders.size, tags: topTags };
   }
 
+  // ---------- Offene Aufgaben einsammeln (Markdown-Checkboxen "- [ ]") ----------
+  // Für die Decision Engine: liefert offene To-dos aus dem zweiten Gehirn.
+  async function openTasks(max = 25) {
+    if (!handle) return [];
+    const files = await allFiles();
+    // Zuletzt geänderte Dateien zuerst (frische Aufgaben sind relevanter).
+    const withTime = [];
+    for (const f of files.slice(0, 120)) {
+      try { withTime.push({ f, m: (await f.entry.getFile()).lastModified }); } catch (e) {}
+    }
+    withTime.sort((a, b) => b.m - a.m);
+
+    const tasks = [];
+    const seen = new Set();
+    const re = /^\s*[-*]\s\[ \]\s+(.+?)\s*$/gm;
+    for (const { f } of withTime.slice(0, 60)) {
+      if (tasks.length >= max) break;
+      let text = "";
+      try { text = await (await f.entry.getFile()).text(); } catch (e) { continue; }
+      let m;
+      while ((m = re.exec(text)) && tasks.length < max) {
+        // Markdown-Reste (Links, Fett, Tags am Ende) leicht säubern
+        const raw = m[1].replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g, "$1").replace(/[*_`]/g, "").trim();
+        const key = raw.toLowerCase();
+        if (raw && !seen.has(key)) { seen.add(key); tasks.push({ text: raw, file: f.path }); }
+      }
+    }
+    return tasks;
+  }
+
   // ---------- An eine bestimmte Notiz anhängen (anlegen falls nötig) ----------
   async function appendToNote(query, text) {
     const found = await readNote(query);
@@ -224,6 +254,6 @@ const Obsidian = (() => {
   return {
     isSupported, pick, reconnect, connected,
     search, appendToDaily, createNote,
-    readNote, recent, stats, appendToNote,
+    readNote, recent, stats, appendToNote, openTasks,
   };
 })();

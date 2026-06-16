@@ -106,6 +106,7 @@
       <button id="wakeBtn" title="Wake-Word an/aus: sag 'Jarvis'">👂 AUS</button>
       <button id="vaultBtn" title="Obsidian-Vault verbinden">📂</button>
       <button id="quickSaveBtn" title="Idee direkt in Daily Note speichern (Strg+S)">💾</button>
+      <button id="decisionBtn" title="Was soll ich jetzt tun? — Decision Engine (Strg+D)">🧭 ENTSCHEIDEN</button>
       <button id="resetBtn" title="Gespräch / Gedächtnis löschen">🗑</button>
     </footer>
 
@@ -134,9 +135,85 @@
     </div>
   </div>
 
+  <!-- ===== DECISION ENGINE — "Was soll ich jetzt tun?" ===== -->
+  <div id="decisionOverlay" class="dz-overlay hidden">
+    <div class="dz-window">
+      <span class="bracket tl"></span><span class="bracket tr"></span>
+      <span class="bracket bl"></span><span class="bracket br"></span>
+
+      <div class="dz-head">
+        <div class="dz-title">🧭 DECISION ENGINE<span class="dz-sub">// WAS SOLL ICH JETZT TUN?</span></div>
+        <button id="dzClose" class="dz-x" title="Schließen (Esc)">✕</button>
+      </div>
+
+      <div class="dz-context" id="dzContext"></div>
+
+      <div class="dz-body">
+
+        <!-- SCHRITT 1: ERFASSEN -->
+        <div class="dz-step dz-intake" id="dzIntake">
+          <div class="dz-q">
+            <label>ENERGIE-LEVEL</label>
+            <div class="dz-seg" id="dzEnergy"></div>
+          </div>
+          <div class="dz-q">
+            <label>VERFÜGBARE ZEIT</label>
+            <div class="dz-seg" id="dzTime"></div>
+          </div>
+          <div class="dz-q">
+            <label>FOKUS / STIMMUNG</label>
+            <div class="dz-seg" id="dzMood"></div>
+          </div>
+          <div class="dz-q">
+            <label>WORAUF HAST DU LUST / WAS DRÜCKT? <span class="dz-opt">optional</span></label>
+            <input id="dzNote" class="dz-note" placeholder="z.B. Mathe-HA, neues Spiel coden, total müde…" />
+          </div>
+          <button id="dzAnalyze" class="dz-analyze">ANALYSIEREN ▸</button>
+        </div>
+
+        <!-- SCHRITT 2: ANALYSIEREN -->
+        <div class="dz-step dz-analyzing hidden" id="dzAnalyzing">
+          <canvas id="dzScanner" width="170" height="170"></canvas>
+          <div class="dz-scan-label">BERECHNE OPTIMALE ENTSCHEIDUNG…</div>
+          <div class="dz-scan-feed" id="dzFeed"></div>
+        </div>
+
+        <!-- SCHRITT 3: ERGEBNIS -->
+        <div class="dz-step dz-result hidden" id="dzResult">
+          <div class="dz-rec">
+            <div class="dz-rec-main">
+              <div class="dz-rec-icon" id="dzRecIcon">💻</div>
+              <div class="dz-rec-text">
+                <div class="dz-rec-kicker">TOP-EMPFEHLUNG</div>
+                <div class="dz-rec-label" id="dzRecLabel">—</div>
+                <div class="dz-rec-meta" id="dzRecMeta"></div>
+                <div class="dz-rec-why" id="dzRecWhy">—</div>
+              </div>
+            </div>
+            <div class="dz-rec-conf">
+              <canvas id="dzConf" width="96" height="96"></canvas>
+              <span class="dz-conf-cap">MATCH</span>
+            </div>
+          </div>
+
+          <div class="dz-factors-title">WARUM — FAKTOR-ANALYSE</div>
+          <div class="dz-factors" id="dzFactors"></div>
+
+          <div class="dz-alts-title">ALTERNATIVEN</div>
+          <div class="dz-alts" id="dzAlts"></div>
+
+          <div class="dz-actions" id="dzActions"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <script src="/js/voice-viz.js"></script>
   <script src="/js/hud-fx.js"></script>
   <script src="/js/obsidian.js"></script>
+  <script src="/js/decision-engine.js"></script>
+  <script src="/js/decision-ui.js"></script>
   <script src="/js/tools.js"></script>
   <script src="/js/app.js"></script>
 </body>

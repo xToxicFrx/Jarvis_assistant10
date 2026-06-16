@@ -155,6 +155,24 @@ const TOOL_SCHEMAS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "decide_what_to_do",
+      description: "Startet die Decision Engine und empfiehlt, was Luca GERADE JETZT am sinnvollsten tun sollte. "
+        + "Nutze das, wenn er fragt 'Was soll ich jetzt tun/machen?', sich unentschlossen, gelangweilt oder überfordert fühlt. "
+        + "Bezieht Energie, freie Zeit, Stimmung, Tageszeit, Wetter und offene Vault-Aufgaben ein.",
+      parameters: {
+        type: "object",
+        properties: {
+          minutes: { type: "integer", description: "Wie viel Zeit Luca gerade hat (Minuten), falls genannt." },
+          energy: { type: "integer", description: "Energielevel 1 (erschöpft) bis 5 (voll aufgeladen), falls erkennbar." },
+          mood: { type: "string", enum: ["focused", "creative", "social", "relaxed", "any"], description: "Stimmung/Fokus, falls erkennbar." },
+          note: { type: "string", description: "Optionaler Hinweis, worauf er Lust hat oder was ansteht." },
+        },
+      },
+    },
+  },
 ];
 
 // ============================================================
@@ -246,6 +264,16 @@ async function runTool(name, args, ctx) {
       ctx.scheduleTimer(secs, args.label || "");
       const mins = Math.round(secs / 60);
       return `Timer gestellt für ${secs < 90 ? secs + " Sekunden" : mins + " Minuten"}${args.label ? " (" + args.label + ")" : ""}.`;
+    }
+
+    case "decide_what_to_do": {
+      if (!ctx.decide) return "Die Decision Engine ist gerade nicht verfügbar.";
+      const opts = {};
+      if (args.minutes) opts.minutes = Math.max(5, parseInt(args.minutes) || 30);
+      if (args.energy) opts.energy = Math.min(5, Math.max(1, parseInt(args.energy)));
+      if (args.mood) opts.mood = args.mood;
+      if (args.note) opts.note = args.note;
+      return await ctx.decide(opts);
     }
 
     default:

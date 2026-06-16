@@ -82,6 +82,12 @@ DEIN WICHTIGSTER ZWECK – ZWEITES GEHIRN (Obsidian):
 - Schlage aktiv Verbindungen vor ("Das passt zu deiner Notiz über X").
 - Beim Schreiben in Notizen nutze sauberes Markdown (Überschriften, Listen, #tags).
 
+DECISION ENGINE – "WAS SOLL ICH JETZT TUN?":
+- Wenn Luca unentschlossen, gelangweilt oder überfordert ist oder fragt, was er
+  jetzt tun soll, nutze das Werkzeug decide_what_to_do. Es wägt Energie, freie
+  Zeit, Stimmung, Tageszeit, Wetter und offene Aufgaben ab und schlägt das
+  Sinnvollste vor. Sag den Top-Vorschlag kurz und motivierend weiter.
+
 WEITERE WERKZEUGE: Uhrzeit/Datum, Wetter & Vorhersage, Websuche (für aktuelle
 Fakten), Vault-Statistik, zuletzt bearbeitete Notizen, Timer/Erinnerungen.
 Nutze Werkzeuge selbstständig, wenn sie helfen.
@@ -317,7 +323,36 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
       }, secs * 1000);
     },
     onStats: showStats,
+    // Decision Engine per Sprache auslösen ("Was soll ich jetzt tun?")
+    decide: (opts) => DecisionUI.runAuto(opts),
   };
+
+  // ---- Decision Engine verdrahten ----
+  DecisionUI.setHooks({
+    speak,
+    log: logActivity,
+    scheduleTimer: ctx.scheduleTimer,
+    location: ctx.location,
+    getTasks: async () => {
+      try { return (await ctx.ensureVault()) ? await Obsidian.openTasks(25) : []; }
+      catch (e) { return []; }
+    },
+    onSave: async (line) => {
+      try {
+        if (!Obsidian.connected()) return false;
+        await Obsidian.appendToDaily(line.replace(/^🧭\s*/, ""));
+        loadDailyNotePreview();
+        return true;
+      } catch (e) { return false; }
+    },
+    onDecision: () => refreshVault(),
+  });
+  DecisionUI.mount();
+  $("decisionBtn").addEventListener("click", () => DecisionUI.open());
+  // Strg+D öffnet die Decision Engine
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && (e.key === "d" || e.key === "D")) { e.preventDefault(); DecisionUI.open(); }
+  });
 
   // ---- Agenten-Loop ----
   async function converse(userText) {
