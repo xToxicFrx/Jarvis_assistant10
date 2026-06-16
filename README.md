@@ -1,47 +1,43 @@
-# JARVIS — sicherer KI-Sprachassistent (Vercel + GitHub)
+# Jarvis — persoenlicher Planungs-Assistent (Vercel + GitHub)
 
-Ein sprachgesteuerter KI-Assistent im Iron-Man-HUD-Stil. Läuft im Browser,
-gehostet über **Vercel**, verbunden mit **GitHub**. Die API-Keys liegen
-**sicher auf dem Server** — niemals im Code, niemals im Browser.
+Ein moderner Assistent fuer den Schulalltag. Du redest per Stimme oder Text
+mit ChatGPT, und Jarvis haelt deine **Aufgaben, Hausaufgaben (nach Fach),
+deinen Stundenplan und Erinnerungen** an einem Ort fest — immer sichtbar auf
+einem ruhigen, modernen Dashboard. Laeuft im Browser, gehostet ueber **Vercel**.
 
----
-
-## 🔒 Wie die Sicherheit funktioniert
-
-1. **Keys nur als Server-Geheimnisse:** Deine OpenAI- und ElevenLabs-Keys
-   speicherst du als *Environment Variables* bei Vercel. Sie stehen nie im
-   Code und kommen nie auf GitHub (`.gitignore` schützt `.env`).
-2. **Der Browser sieht die Keys nie:** Die Webseite ruft nur **deine eigenen**
-   Funktionen `/api/chat`, `/api/tts`, `/api/stt`. Diese fügen den Key
-   serverseitig hinzu und sprechen mit OpenAI/ElevenLabs.
-3. **Persönliches Passwort:** Jede Funktion ist mit deinem `APP_PASSWORD`
-   geschützt. Die Seite ist zwar im Internet, aber nur **du** kannst JARVIS
-   benutzen — niemand sonst kann deine Rechnung belasten.
-4. **Backstop:** Setz im OpenAI-Dashboard ein **Ausgabenlimit**.
+Die API-Keys liegen **sicher auf dem Server** — niemals im Code, niemals im Browser.
 
 ---
 
-## 🚀 Einrichten (einmalig, ~10 Minuten)
+## Wie die Sicherheit funktioniert
+
+1. **Keys nur als Server-Geheimnisse:** OpenAI- und ElevenLabs-Keys liegen als
+   *Environment Variables* bei Vercel. Sie stehen nie im Code und kommen nie auf
+   GitHub (`.gitignore` schuetzt `.env`).
+2. **Der Browser sieht die Keys nie:** Die Seite ruft nur deine eigenen Funktionen
+   `/api/chat`, `/api/tts`, `/api/stt`, `/api/state`. Diese fuegen den Key
+   serverseitig hinzu.
+3. **Persoenliches Passwort:** Jede Funktion ist mit deinem `APP_PASSWORD`
+   geschuetzt. Nur du kannst Jarvis benutzen.
+4. **Backstop:** Setz im OpenAI-Dashboard ein Ausgabenlimit.
+
+---
+
+## Einrichten (einmalig)
 
 ### Schritt 1 — Keys besorgen
-- **OpenAI:** platform.openai.com → *API keys* → *Create new secret key* (`sk-...`)
-- **ElevenLabs:** elevenlabs.io → Profil → *API Key*
-- **Voice-ID:** elevenlabs.io → *Voices* → bei einer Stimme die ID kopieren
-  (Standard ist schon `MMwckqU477oQxnAk1SgA`)
+- **OpenAI:** platform.openai.com -> *API keys* -> *Create new secret key* (`sk-...`)
+- **ElevenLabs:** elevenlabs.io -> Profil -> *API Key*
+- **Voice-ID:** elevenlabs.io -> *Voices* -> ID kopieren (Standard: `MMwckqU477oQxnAk1SgA`)
 
-### Schritt 2 — Code auf GitHub
-Der Code liegt in deinem Repo `Jarvis_assistant10`. Wenn Dateien fehlen:
-GitHub → **Add file → Upload files** → Dateien reinziehen → **Commit**.
+### Schritt 2 — Vercel verbinden
+1. vercel.com -> mit GitHub anmelden
+2. *Add New… -> Project* -> Repo `Jarvis_assistant10` -> *Import*
+3. Framework: **Other** (nichts aendern)
+4. Erst die Variablen eintragen (unten), dann **Deploy**.
 
-### Schritt 3 — Vercel verbinden
-1. **vercel.com** → mit **GitHub** anmelden
-2. **Add New… → Project** → Repo `Jarvis_assistant10` → **Import**
-3. Framework: **Other** (nichts ändern)
-4. **NOCH NICHT auf Deploy klicken!** Erst die Keys eintragen ⬇️
-
-### Schritt 4 — Geheime Keys bei Vercel eintragen 🔑
-Im Import-Bildschirm (oder später unter **Settings → Environment Variables**)
-trag diese **4 Variablen** ein:
+### Schritt 3 — Variablen bei Vercel eintragen
+Unter *Settings -> Environment Variables*:
 
 | Name | Wert |
 |------|------|
@@ -50,59 +46,74 @@ trag diese **4 Variablen** ein:
 | `ELEVENLABS_VOICE_ID` | `MMwckqU477oQxnAk1SgA` |
 | `APP_PASSWORD` | ein Passwort, das du dir ausdenkst |
 
-Dann **Deploy** klicken.
+### Schritt 4 (optional, empfohlen) — Cloud-Sync ueber alle Geraete
+Damit Handy und Laptop dieselben Aufgaben zeigen:
+1. Vercel -> *Storage* -> neue **KV (Upstash Redis)** anlegen und mit dem Projekt
+   verbinden. Das setzt automatisch `KV_REST_API_URL` und `KV_REST_API_TOKEN`.
+2. Neu deployen.
+
+Ohne diesen Schritt funktioniert alles trotzdem — die Daten liegen dann nur
+**lokal auf dem jeweiligen Geraet** (kein Sync). Sobald die beiden Variablen
+gesetzt sind, schaltet Jarvis automatisch auf Synchronisierung um.
 
 ### Schritt 5 — Benutzen
-1. Öffne deine `…vercel.app`-Adresse in **Chrome**
+1. Oeffne deine `…vercel.app`-Adresse (am besten **Chrome**)
 2. Gib dein `APP_PASSWORD` ein
-3. 🎤 Mikro-Knopf (oder Leertaste) halten und sprechen — oder Text tippen
-4. JARVIS antwortet mit Stimme ✨
+3. Mikro-Knopf (oder Leertaste) halten und sprechen — oder Text tippen
+4. Auf dem Handy: ueber das Browser-Menue *Zum Startbildschirm hinzufuegen* —
+   dann startet Jarvis wie eine App.
 
-> Test: `…vercel.app/api/health` zeigt, ob alle 4 Variablen gesetzt sind
-> (nur ja/nein, keine Keys werden angezeigt).
+> Test: `…vercel.app/api/health` zeigt, ob die Variablen gesetzt sind (nur ja/nein).
 
 ---
 
-## 🧠 Wie JARVIS "denkt" (Function-Calling)
+## Was Jarvis kann
+- **Reden mit ChatGPT** per Stimme (Whisper) oder Text, Antwort als Stimme (ElevenLabs).
+- **Wake-Word "Jarvis"** (Desktop Chrome/Edge): sag "Jarvis ...", er hoert zu.
+- **Aufgaben/Todos** mit Faelligkeitsdatum und Prioritaet.
+- **Hausaufgaben nach Fach** gruppiert.
+- **Stundenplan** fuer die Woche (heute hervorgehoben).
+- **Erinnerungen** mit Browser-Benachrichtigung.
+- **Planungs-Coach:** Jarvis kennt deinen aktuellen Stand, analysiert deine Woche
+  und gibt Tipps ("Was soll ich zuerst machen?", "Analysiere meine Woche").
+- Alles ist auch per Hand eintragbar und immer auf dem Dashboard sichtbar.
+- Hell/Dunkel-Design, handytauglich, ohne Emojis.
 
-JARVIS bekommt vom KI-Modell eine Liste von **Werkzeugen**. Das Modell
-entscheidet selbst, ob es direkt antwortet oder erst ein Werkzeug benutzt
-(z.B. Wetter holen, Notizen durchsuchen). Der Browser führt das Werkzeug aus,
-schickt das Ergebnis zurück, und das Modell antwortet damit. So bleibt alles
-sicher (Keys am Server) und JARVIS kann echte Aktionen ausführen.
+## Grenzen
+- **Benachrichtigungen** funktionieren nur, solange die App (der Tab) offen ist.
+  Echte Hinweise bei geschlossener App braeuchten Web-Push — nicht in dieser Version.
+- **Wake-Word** ist auf Handys (besonders iPhone/Safari) unzuverlaessig. Dort lieber
+  den Mikro-Knopf zum Sprechen nutzen.
 
-Rechts im HUD zeigt das **Aktivitäts-Log** live, was gerade passiert.
+---
 
-## 📁 Aufbau
+## Aufbau
 ```
-index.html        HUD + Login
-style.css         Aussehen
+index.html        Login + Dashboard + Icon-Sprite (keine Emojis)
+style.css         modernes Design (hell/dunkel, mobile-first)
+manifest.webmanifest  PWA (Add-to-Home-Screen)
+icons/icon.svg    App-Icon
 js/
-  voice-viz.js    Arc-Reaktor-Visualizer (Mitte)
-  hud-fx.js       animierter Hintergrund (Gitter/Radar/Partikel) + Gauges
-  obsidian.js     Vault: suchen, ganze Notiz lesen, Statistik, schreiben
-  tools.js        11 Werkzeuge (Wetter, Suche, Notizen, Timer …)
-  app.js          Login, Agenten-Loop, Mikro, Wake-Word, Gedächtnis, Vault-Panel
-api/              SICHERE Server-Funktionen (Keys bleiben hier)
-  _lib.js         Passwort-Prüfung
+  store.js        einzige Datenquelle: lokal + Cloud-Sync, Schnappschuss fuer die KI
+  reminders.js    Erinnerungen planen + Benachrichtigungen
+  tools.js        Werkzeuge: Aufgaben/Hausaufgaben/Stundenplan/Erinnerung, Wetter, Suche, Timer
+  ui.js           Dashboard, Dialoge, Toasts, Theme
+  app.js          Login, Agenten-Loop, Stimme (STT/TTS), Wake-Word
+  obsidian.js     (optional, derzeit nicht eingebunden)
+api/              sichere Server-Funktionen (Keys bleiben hier)
+  _lib.js         Passwort-Pruefung
   chat.js         Gehirn (OpenAI, mit Function-Calling)
+  state.js        Cloud-Sync (Upstash Redis ueber REST)
   search.js       Websuche (DuckDuckGo, kein Key)
   tts.js          Stimme raus (ElevenLabs)
   stt.js          Stimme rein (Whisper)
   health.js       Test
 ```
 
-## Funktionen
-- [x] Sicheres Hosting, Text + Sprache (Keys serverseitig + Passwort)
-- [x] Persönlichkeit (JARVIS kennt dich)
-- [x] **Timer & Erinnerungen** — "Erinner mich in 5 Minuten"
-- [x] **Wetter-Vorhersage** — "Wie ist das Wetter morgen?" (Open-Meteo, kein Key)
-- [x] **Obsidian-Notizen** — "Was steht in meinen Notizen über X?" (Browser fragt
-      einmal nach deinem Vault-Ordner; nur Chrome/Edge)
-- [x] **Wake-Word „Jarvis"** — Knopf 👂 anschalten, dann "Jarvis …" sagen.
-      Nutzt die eingebaute Chrome-Spracherkennung — **kein zusätzlicher Key nötig!**
-
-## Brauche ich neue Keys?
-Nein! Es bleiben dieselben 4 Vercel-Variablen wie vorher
-(`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `APP_PASSWORD`).
-Das Wake-Word läuft ohne extra Key.
+## Lokal testen
+Mit der Vercel-CLI (liefert statische Dateien UND die `/api/*`-Funktionen):
+```
+npx vercel dev
+```
+Variablen vorher per `vercel env pull .env.local` holen oder in `.env` setzen.
+Ohne gesetzte KV-Variablen laeuft die App im lokalen Modus (ohne Sync).

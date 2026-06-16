@@ -21,9 +21,16 @@ export default async function handler(req, res) {
     const bytes = Buffer.from(audio, "base64");
     const blob = new Blob([bytes], { type: mime || "audio/webm" });
 
+    // Dateiendung passend zum MIME waehlen (Chrome=webm, Safari=mp4 ...)
+    const m = mime || "audio/webm";
+    const ext = m.includes("mp4") || m.includes("m4a") ? "mp4"
+      : m.includes("ogg") ? "ogg"
+      : m.includes("mpeg") || m.includes("mp3") ? "mp3"
+      : m.includes("wav") ? "wav" : "webm";
+
     // Multipart-Formular für Whisper bauen
     const form = new FormData();
-    form.append("file", blob, "audio.webm");
+    form.append("file", blob, "audio." + ext);
     form.append("model", "whisper-1");
     form.append("language", "de");
 
