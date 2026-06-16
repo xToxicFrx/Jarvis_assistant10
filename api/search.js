@@ -1,19 +1,23 @@
 // ============================================================
-// /api/search — Websuche über DuckDuckGo (kostenlos, kein Key).
-// JARVIS ruft das auf, wenn er aktuelle Infos aus dem Internet
-// braucht. Gibt eine kurze Text-Zusammenfassung zurück.
+// /api/search — Websuche ueber DuckDuckGo (kostenlos, kein Key).
+// Gibt eine kurze Text-Zusammenfassung zurueck. Token-Auth + Limit.
 // ============================================================
-import { checkAuth } from "./_lib.js";
+import { requireAuth, methodGuard, sendJson, getClientIp, getBody, vString } from "./_lib.js";
+import { rateLimit } from "./_ratelimit.js";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Nur POST erlaubt." });
-  if (!checkAuth(req, res)) return;
+  if (!methodGuard(req, res, ["POST"])) return;
+  if (!requireAuth(req, res)) return;
 
-  const { query } = req.body || {};
-  if (!query) return res.status(400).json({ error: "query fehlt." });
+  const rl = await rateLimit("search", getClientIp(req), 25, 60);
+  if (!rl.ok) { res.setHeader("Retry-After", String(rl.retryAfter)); return sendJson(res, 429, { error: "Zu viele Anfragen." }); }
 
   try {
-    // DuckDuckGo "Instant Answer" API — liefert Zusammenfassungen
+    const body = await getBody(req);
+    let query;
+    try { query = vString(body.query, "query", { required: true, max: 300 }); }
+    catch (e) { return sendJson(res, 400, { error: e.message }); }
+
     const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
     const r = await fetch(url, { headers: { "Accept-Language": "de-DE,de" } });
     const d = await r.json();
@@ -22,16 +26,11 @@ export default async function handler(req, res) {
     if (d.Answer) parts.push(String(d.Answer));
     if (d.AbstractText) parts.push(d.AbstractText);
     if (d.Definition) parts.push(d.Definition);
-    (d.RelatedTopics || []).slice(0, 4).forEach((t) => {
-      if (t && t.Text) parts.push(t.Text);
-    });
+    (d.RelatedTopics || []).slice(0, 4).forEach((t) => { if (t && t.Text) parts.push(t.Text); });
 
     const result = parts.filter(Boolean).join(" — ") || "Keine direkten Ergebnisse gefunden.";
-    res.status(200).json({
-      result: result.substring(0, 800),
-      source: d.AbstractURL || "",
-    });
+    return sendJson(res, 200, { result: result.substring(0, 800), source: d.AbstractURL || "" });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return sendJson(res, 500, { error: e.message });
   }
 }

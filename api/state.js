@@ -1,104 +1,78 @@
 // ============================================================
-// /api/state — Cloud-Sync fuer den Schueler-Planer.
+// /api/state — Cloud-Sync (ein Dokument pro Nutzer).
 //
-// Speichert EIN JSON-Dokument pro Nutzer (Aufgaben, Hausaufgaben,
-// Stundenplan, Erinnerungen, Einstellungen) in Upstash Redis
-// ueber dessen REST-API. Kein SDK noetig — nur fetch().
+//   GET  /api/state            -> { cloud, data?, updatedAt?, salt? }
+//   PUT  /api/state {data, updatedAt, salt} -> { cloud, ok, updatedAt }
 //
-//   GET  /api/state           -> { state: <doc> | null, cloud: true }
-//   PUT  /api/state {state}    -> { ok: true, updatedAt, cloud: true }
+// "data" ist fuer den Server UNDURCHSICHTIG: entweder Klartext-JSON
+// oder ein Verschluesselungs-Umschlag (Zero-Knowledge). Der Server
+// speichert es nur. "salt" (oeffentlich) erlaubt anderen Geraeten,
+// denselben Schluessel aus dem Passwort abzuleiten.
 //
-// Sind die KV-Variablen nicht gesetzt, antwortet der Endpoint mit
-// 501 — der Browser laeuft dann nur lokal (localStorage) weiter.
-// Die Schluessel-Adresse haengt am Passwort-Hash; das echte
-// Passwort bleibt serverseitig (checkAuth).
+// Schluessel-Adresse haengt am Passwort-Hash; das echte Passwort
+// bleibt serverseitig (requireAuth). Ohne KV -> {cloud:false}.
 // ============================================================
-import { checkAuth } from "./_lib.js";
 import crypto from "node:crypto";
+import { requireAuth, methodGuard, sendJson, getClientIp, getBody, vInt } from "./_lib.js";
+import { rateLimit } from "./_ratelimit.js";
 
-const MAX_BYTES = 256 * 1024;
-
-function readRaw(req) {
-  return new Promise((resolve) => {
-    let data = "";
-    req.on("data", (c) => { data += c; });
-    req.on("end", () => resolve(data));
-    req.on("error", () => resolve(""));
-  });
-}
+const MAX_BYTES = 512 * 1024;
 
 function kvConfig() {
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
+  const url = process.env.KV_REST_API_URL, token = process.env.KV_REST_API_TOKEN;
   if (!url || !token) return null;
   return { url: url.replace(/\/$/, ""), token };
 }
-
 function stateKey() {
   const pw = process.env.APP_PASSWORD || "";
-  const hash = crypto.createHash("sha256").update(pw).digest("hex");
-  return "jarvis:state:" + hash;
+  return "jarvis:state:" + crypto.createHash("sha256").update(pw).digest("hex");
 }
-
 async function kvGet(cfg, key) {
-  const r = await fetch(`${cfg.url}/get/${encodeURIComponent(key)}`, {
-    headers: { Authorization: "Bearer " + cfg.token },
-  });
+  const r = await fetch(`${cfg.url}/get/${encodeURIComponent(key)}`, { headers: { Authorization: "Bearer " + cfg.token } });
   if (!r.ok) throw new Error("KV GET " + r.status);
-  const d = await r.json();
-  return d.result; // string | null
+  return (await r.json()).result;
 }
-
 async function kvSet(cfg, key, value) {
-  const r = await fetch(`${cfg.url}/set/${encodeURIComponent(key)}`, {
-    method: "POST",
-    headers: { Authorization: "Bearer " + cfg.token },
-    body: value,
-  });
+  const r = await fetch(`${cfg.url}/set/${encodeURIComponent(key)}`, { method: "POST", headers: { Authorization: "Bearer " + cfg.token }, body: value });
   if (!r.ok) throw new Error("KV SET " + r.status);
   return r.json();
 }
 
 export default async function handler(req, res) {
-  if (!checkAuth(req, res)) return;
+  if (!methodGuard(req, res, ["GET", "PUT", "POST"])) return;
+  if (!requireAuth(req, res)) return;
+
+  const rl = await rateLimit("state", getClientIp(req), 180, 60);
+  if (!rl.ok) { res.setHeader("Retry-After", String(rl.retryAfter)); return sendJson(res, 429, { error: "Zu viele Anfragen." }); }
 
   const cfg = kvConfig();
-  if (!cfg) {
-    return res.status(501).json({
-      error: "Cloud-Sync nicht eingerichtet (KV_REST_API_URL / KV_REST_API_TOKEN fehlen).",
-      cloud: false,
-    });
-  }
-
+  if (!cfg) return sendJson(res, 200, { cloud: false });
   const key = stateKey();
 
   try {
     if (req.method === "GET") {
       const raw = await kvGet(cfg, key);
-      let state = null;
-      if (raw) { try { state = JSON.parse(raw); } catch (e) { state = null; } }
-      return res.status(200).json({ state, cloud: true });
+      if (!raw) return sendJson(res, 200, { cloud: true, data: null, updatedAt: 0, salt: null });
+      let rec; try { rec = JSON.parse(raw); } catch (e) { rec = null; }
+      if (!rec) return sendJson(res, 200, { cloud: true, data: null, updatedAt: 0, salt: null });
+      return sendJson(res, 200, { cloud: true, data: rec.data ?? null, updatedAt: rec.updatedAt || 0, salt: rec.salt || null });
     }
 
-    if (req.method === "PUT" || req.method === "POST") {
-      let body = req.body;
-      if (body == null) { const raw = await readRaw(req); try { body = JSON.parse(raw); } catch (e) { body = {}; } }
-      if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
-      const state = body && body.state;
-      if (!state || typeof state !== "object") {
-        return res.status(400).json({ error: "Es fehlt 'state'." });
-      }
-      const serialized = JSON.stringify(state);
-      if (serialized.length > MAX_BYTES) {
-        return res.status(413).json({ error: "State zu gross (Limit 256 KB)." });
-      }
-      await kvSet(cfg, key, serialized);
-      return res.status(200).json({ ok: true, updatedAt: state.updatedAt || Date.now(), cloud: true });
-    }
+    // PUT / POST
+    const body = await getBody(req);
+    const data = body.data;
+    if (data == null || typeof data !== "object") return sendJson(res, 400, { error: "Es fehlt 'data'." });
+    let updatedAt;
+    try { updatedAt = vInt(body.updatedAt, "updatedAt", { required: true, min: 0, max: 1e15 }); }
+    catch (e) { return sendJson(res, 400, { error: e.message }); }
+    const salt = typeof body.salt === "string" ? body.salt.slice(0, 256) : null;
 
-    res.setHeader("Allow", "GET, PUT");
-    return res.status(405).json({ error: "Nur GET oder PUT erlaubt." });
+    const serialized = JSON.stringify({ data, updatedAt, salt });
+    if (serialized.length > MAX_BYTES) return sendJson(res, 413, { error: "Daten zu gross (Limit 512 KB)." });
+
+    await kvSet(cfg, key, serialized);
+    return sendJson(res, 200, { cloud: true, ok: true, updatedAt });
   } catch (e) {
-    return res.status(502).json({ error: "KV-Fehler: " + e.message });
+    return sendJson(res, 502, { error: "KV-Fehler: " + e.message });
   }
 }
