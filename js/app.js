@@ -111,6 +111,27 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
   }
 
   // ---- TTS ----
+  // Kostenlose Notfall-Stimme: eingebaute Browser-Sprachausgabe (wenn ElevenLabs
+  // nicht geht, z.B. Kontingent leer). Unbegrenzt, dafuer etwas einfacher.
+  let ttsWarned = false;
+  function browserSpeak(text) {
+    return new Promise((resolve) => {
+      if (!("speechSynthesis" in window)) { resolve(); return; }
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "de-DE";
+        const vs = window.speechSynthesis.getVoices();
+        const de = vs.find((v) => /de(-|_)/i.test(v.lang));
+        if (de) u.voice = de;
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
+        UI.setLevel(0.5);
+        window.speechSynthesis.speak(u);
+      } catch (e) { resolve(); }
+    });
+  }
+
   async function speak(text) {
     if (!text) { UI.setVoiceState("idle"); return; }
     UI.setVoiceState("speaking"); UI.setLevel(0.4);
@@ -125,7 +146,10 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
       } catch (e) { await audio.play(); }
       await new Promise((r) => audio.addEventListener("ended", r));
       URL.revokeObjectURL(url);
-    } catch (e) { UI.toast("Stimme-Fehler: " + e.message, "error"); }
+    } catch (e) {
+      if (/quota/i.test(e.message) && !ttsWarned) { ttsWarned = true; UI.toast("ElevenLabs-Kontingent leer - nutze Browser-Stimme.", "error"); }
+      await browserSpeak(text);
+    }
     finally { UI.setLevel(0); UI.setVoiceState("idle"); relistenWake(); }
   }
 
