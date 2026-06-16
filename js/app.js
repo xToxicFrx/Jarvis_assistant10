@@ -141,12 +141,12 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
   $("resetBtn").addEventListener("click", () => { history = []; persist(); UI.setTranscript("Jarvis", "Gespraech zurueckgesetzt."); UI.toast("Gespraech zurueckgesetzt"); });
 
   // ---- Mikrofon (Push-to-talk) ----
-  let mediaRec = null, chunks = [], micActive = false, currentMime = "audio/webm";
+  let mediaRec = null, chunks = [], micActive = false, currentMime = "audio/webm", recStart = 0;
   function pickMime() { const c = ["audio/webm", "audio/mp4", "audio/ogg"]; for (const m of c) if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; return ""; }
   async function startMic() {
     if (micActive) return; micActive = true; chunks = [];
     $("micBtn").classList.add("recording"); UI.setVoiceState("listening");
-    try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const mime = pickMime(); mediaRec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); currentMime = mediaRec.mimeType || mime || "audio/webm"; mediaRec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; mediaRec.start(); }
+    try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const mime = pickMime(); mediaRec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); currentMime = mediaRec.mimeType || mime || "audio/webm"; mediaRec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; recStart = Date.now(); mediaRec.start(200); }
     catch (e) { micActive = false; $("micBtn").classList.remove("recording"); UI.setVoiceState("idle"); UI.toast("Kein Mikrofon-Zugriff", "error"); }
   }
   async function stopMic() {
@@ -155,7 +155,9 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
     await new Promise((r) => { mediaRec.onstop = r; mediaRec.stop(); });
     mediaRec.stream.getTracks().forEach((t) => t.stop());
     const blob = new Blob(chunks, { type: currentMime });
-    try { const b64 = await blobToBase64(blob); const d = await Auth.apiFetch("/api/stt", { json: { audio: b64, mime: currentMime } }); if (d.text && d.text.trim()) run(d.text); else { UI.setVoiceState("idle"); relistenWake(); } }
+    const dur = Date.now() - recStart;
+    if (blob.size < 1200 || dur < 400) { UI.setVoiceState("idle"); UI.toast("Aufnahme zu kurz - Knopf gedrueckt halten und sprechen."); relistenWake(); return; }
+    try { const b64 = await blobToBase64(blob); const d = await Auth.apiFetch("/api/stt", { json: { audio: b64, mime: currentMime } }); if (d.text && d.text.trim()) run(d.text); else { UI.setVoiceState("idle"); UI.toast("Nichts verstanden - bitte nochmal."); relistenWake(); } }
     catch (e) { console.error(e); UI.setVoiceState("idle"); UI.toast(e.message, "error"); relistenWake(); }
   }
   function blobToBase64(blob) { return new Promise((resolve) => { const r = new FileReader(); r.onloadend = () => resolve(r.result.split(",")[1]); r.readAsDataURL(blob); }); }
