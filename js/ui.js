@@ -295,7 +295,7 @@ window.UI = (function () {
     const { card, body } = cardShell("Taschengeld", "i-wallet");
     card.appendChild(body);
     const bal = Store.balance(), flow = Store.monthFlow();
-    body.appendChild(el("div", { class: "budget-balance" }, [el("b", { text: bal.toFixed(2) + " EUR" }), el("span", { class: "muted", text: `diesen Monat +${flow.inc.toFixed(2)} / ${flow.exp.toFixed(2)}` })]));
+    body.appendChild(el("div", { class: "budget-balance" }, [el("b", { text: bal.toFixed(2) + " " + CONST.CURRENCY }), el("span", { class: "muted", text: `diesen Monat +${flow.inc.toFixed(2)} / ${flow.exp.toFixed(2)}` })]));
     body.appendChild(el("div", { class: "btn-row btn-mb" }, [el("button", { class: "btn btn-sm", type: "button", onclick: () => openBudgetModal("income") }, [icon("i-plus"), document.createTextNode("Einnahme")]), el("button", { class: "btn btn-sm", type: "button", onclick: () => openBudgetModal("expense") }, [icon("i-minus"), document.createTextNode("Ausgabe")])]));
     const recent = s.budget.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 6);
     if (!recent.length) { body.appendChild(empty("Noch keine Buchungen.")); return card; }
@@ -485,7 +485,7 @@ window.UI = (function () {
     const lab = el("input", { type: "text", placeholder: "Wofuer? (optional)" });
     const save = () => { const a = Number(amt.value); if (!(a > 0)) { amt.focus(); return; } Store.addBudgetEntry({ amount: a, label: lab.value.trim(), type }); closeModal(); toast("Gebucht", "success"); };
     amt.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
-    openModal(type === "income" ? "Einnahme" : "Ausgabe", el("div", { class: "modal-body" }, [field("Betrag (EUR)", amt), field("Bezeichnung", lab), actions("Buchen", save)]));
+    openModal(type === "income" ? "Einnahme" : "Ausgabe", el("div", { class: "modal-body" }, [field("Betrag (" + CONST.CURRENCY + ")", amt), field("Bezeichnung", lab), actions("Buchen", save)]));
   }
 
   function openPomodoroSettings() {
@@ -508,6 +508,7 @@ window.UI = (function () {
     const wakeBox = seg([["1", "An"], ["0", "Aus"]], s.wakeOnStart ? "1" : "0", (v) => { Store.setSetting("wakeOnStart", v === "1"); if (window.App && App.setWake) App.setWake(v === "1"); });
     const encBox = seg([["1", "An (empfohlen)"], ["0", "Aus"]], s.encryptCloud ? "1" : "0", (v) => Store.setSetting("encryptCloud", v === "1"));
     const briefBox = seg([["1", "An"], ["0", "Aus"]], s.briefingEnabled ? "1" : "0", (v) => Store.setSetting("briefingEnabled", v === "1"));
+    const voiceBox = seg([["auto", "ElevenLabs"], ["browser", "Browser"], ["off", "Aus"]], s.voiceMode || "auto", (v) => Store.setSetting("voiceMode", v));
     const cloud = el("div", { class: "cloud-pill" + (Store.cloudEnabled ? " on" : "") }, [el("span", { class: "d" }), el("span", { text: Store.cloudEnabled ? (s.encryptCloud ? "Cloud-Sync aktiv, verschluesselt" : "Cloud-Sync aktiv") : "Cloud-Sync aus (nur dieses Geraet)" })]);
     const fileIn = el("input", { type: "file", accept: "application/json" }); fileIn.addEventListener("change", importBackup);
     const dataRow = el("div", { class: "btn-row" }, [el("button", { class: "btn", type: "button", onclick: exportBackup }, [icon("i-download"), document.createTextNode("Backup")]), el("button", { class: "btn", type: "button", onclick: () => fileIn.click() }, [icon("i-upload"), document.createTextNode("Wiederherstellen")]), fileIn]);
@@ -517,6 +518,7 @@ window.UI = (function () {
       field("Wake-Word automatisch (Desktop)", wakeBox.box),
       field("Cloud verschluesseln (Zero-Knowledge)", encBox.box),
       field("Tagesbriefing", briefBox.box),
+      field("Stimme", voiceBox.box),
       field("Benachrichtigungen", notif),
       field("Daten", dataRow), field("Synchronisierung", cloud),
       el("div", { class: "muted small", text: "Version " + CONST.APP_VERSION + " · abmelden schliesst die Sitzung." }),
@@ -601,8 +603,16 @@ window.UI = (function () {
   function toggleTheme() { const cur = document.documentElement.getAttribute("data-theme"); const next = cur === "dark" ? "light" : "dark"; Store.setSetting("theme", next); applyTheme(next); }
 
   // ---------- Setter fuer app.js ----------
-  function setVoiceState(st) { const e = document.getElementById("voiceState"); if (e) e.setAttribute("data-state", st); }
-  function setLevel(x) { const e = document.getElementById("voiceState"); if (e) e.style.setProperty("--level", String(U.clamp(x, 0, 1) * 0.7)); }
+  function setVoiceState(st) {
+    const e = document.getElementById("voiceState"); if (e) e.setAttribute("data-state", st);
+    const w = document.getElementById("orbWrap"); if (w) w.classList.toggle("show", st !== "idle");
+    if (window.VoiceOrb) VoiceOrb.setState(st);
+  }
+  function setLevel(x) {
+    const v = U.clamp(x, 0, 1);
+    const e = document.getElementById("voiceState"); if (e) e.style.setProperty("--level", String(v * 0.7));
+    if (window.VoiceOrb) VoiceOrb.setLevel(v);
+  }
   function setTranscript(label, text) { const e = document.getElementById("transcript"); if (e) e.replaceChildren(el("b", { text: label + ": " }), document.createTextNode(text || "")); }
   function setTip(text) { briefingText = text || briefingText; }
   function setBriefing(text) { briefingText = text || ""; render(Store.get()); }
@@ -642,6 +652,7 @@ window.UI = (function () {
 
   function init() {
     applyTheme();
+    if (window.VoiceOrb) { const orbC = document.getElementById("orb"); if (orbC) VoiceOrb.init(orbC); }
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     if (mq.addEventListener) mq.addEventListener("change", () => { if ((Store.get().settings.theme || "system") === "system") applyTheme(); });
 

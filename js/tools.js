@@ -156,7 +156,7 @@ async function runTool(name, args, ctx) {
     }
     case "add_vocab": { const c = Store.addVocab({ front: args.front, back: args.back }); return `Vokabel gespeichert: ${c.front} = ${c.back}.`; }
     case "list_vocab": { const due = Store.vocabDue().length, total = Store.get().vocab.length; return `${total} Vokabeln, davon ${due} faellig.`; }
-    case "add_money": { const e = Store.addBudgetEntry({ amount: args.amount, label: args.label, type: args.type }); return `${e.amount >= 0 ? "Einnahme" : "Ausgabe"} ${Math.abs(e.amount)} EUR${e.label ? " (" + e.label + ")" : ""} gebucht. Kontostand: ${Store.balance()} EUR.`; }
+    case "add_money": { const e = Store.addBudgetEntry({ amount: args.amount, label: args.label, type: args.type }); const c = CONST.CURRENCY; return `${e.amount >= 0 ? "Einnahme" : "Ausgabe"} ${Math.abs(e.amount)} ${c}${e.label ? " (" + e.label + ")" : ""} gebucht. Kontostand: ${Store.balance()} ${c}.`; }
 
     case "get_overview": return Store.snapshot();
     case "set_timer": { const secs = Math.max(1, parseInt(args.seconds) || 0); ctx.scheduleTimer(secs, args.label || ""); return `Timer fuer ${secs < 90 ? secs + " Sekunden" : Math.round(secs / 60) + " Minuten"} gestellt.`; }

@@ -138,7 +138,7 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
   // ---- TTS ----
   // Kostenlose Notfall-Stimme: eingebaute Browser-Sprachausgabe (wenn ElevenLabs
   // nicht geht, z.B. Kontingent leer). Unbegrenzt, dafuer etwas einfacher.
-  let ttsWarned = false;
+  let ttsWarned = false, elevenDown = false; // elevenDown: nach Kontingent-Fehler direkt Browser-Stimme (kein langsamer Fehlversuch mehr)
   let currentAudio = null;     // laufende ElevenLabs-Audiowiedergabe
   let interactionId = 0;       // verwirft veraltete Antworten
   // Stoppt JEDE laufende Sprachausgabe sofort (ElevenLabs-Audio + Browser-Stimme).
@@ -153,12 +153,16 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
       try {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = "de-DE";
+        u.lang = "de-DE"; u.rate = 1.05;
         const vs = window.speechSynthesis.getVoices();
         const de = vs.find((v) => /de(-|_)/i.test(v.lang));
         if (de) u.voice = de;
-        u.onend = () => resolve();
-        u.onerror = () => resolve();
+        let osc = null;
+        const done = () => { if (osc) clearInterval(osc); osc = null; UI.setLevel(0); resolve(); };
+        // Pegel im "Rhythmus" wackeln lassen, damit sich der Orb bewegt (Browser-Stimme liefert kein Audiosignal).
+        u.onstart = () => { osc = setInterval(() => UI.setLevel(0.3 + Math.random() * 0.55), 110); };
+        u.onboundary = () => UI.setLevel(0.85);
+        u.onend = done; u.onerror = done;
         UI.setLevel(0.5);
         window.speechSynthesis.speak(u);
       } catch (e) { resolve(); }
@@ -167,25 +171,32 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
 
   async function speak(text) {
     if (!text) { UI.setVoiceState("idle"); return; }
+    const mode = (Store.get().settings.voiceMode) || "auto";
+    if (mode === "off") { UI.setVoiceState("idle"); return; }
     stopSpeaking();
     UI.setVoiceState("speaking"); UI.setLevel(0.4);
     try {
-      const blob = await Auth.apiFetch("/api/tts", { json: { text }, audio: true });
-      const url = URL.createObjectURL(blob); const audio = new Audio(url); currentAudio = audio;
-      try {
-        const ac = new AudioContext(); const src = ac.createMediaElementSource(audio); const an = ac.createAnalyser(); an.fftSize = 128; src.connect(an); an.connect(ac.destination);
-        const buf = new Uint8Array(an.frequencyBinCount);
-        (function loop() { if (audio.ended || audio.paused) { UI.setLevel(0); return; } an.getByteFrequencyData(buf); UI.setLevel(buf.reduce((a, b) => a + b, 0) / buf.length / 128); requestAnimationFrame(loop); })();
-        await audio.play();
-      } catch (e) { await audio.play(); }
-      await new Promise((r) => { audio.addEventListener("ended", r); audio.addEventListener("pause", r); audio.addEventListener("error", r); });
-      URL.revokeObjectURL(url);
-      if (currentAudio === audio) currentAudio = null;
-    } catch (e) {
-      if (/quota/i.test(e.message) && !ttsWarned) { ttsWarned = true; UI.toast("ElevenLabs-Kontingent leer - nutze Browser-Stimme.", "error"); }
-      await browserSpeak(text);
-    }
-    finally { UI.setLevel(0); UI.setVoiceState("idle"); relistenWake(); }
+      if (mode === "browser" || elevenDown) { await browserSpeak(text); }
+      else {
+        try {
+          const blob = await Auth.apiFetch("/api/tts", { json: { text }, audio: true });
+          const url = URL.createObjectURL(blob); const audio = new Audio(url); currentAudio = audio;
+          try {
+            const ac = new AudioContext(); const src = ac.createMediaElementSource(audio); const an = ac.createAnalyser(); an.fftSize = 128; src.connect(an); an.connect(ac.destination);
+            const buf = new Uint8Array(an.frequencyBinCount);
+            (function loop() { if (audio.ended || audio.paused) { UI.setLevel(0); return; } an.getByteFrequencyData(buf); UI.setLevel(buf.reduce((a, b) => a + b, 0) / buf.length / 128); requestAnimationFrame(loop); })();
+            await audio.play();
+          } catch (e) { await audio.play(); }
+          await new Promise((r) => { audio.addEventListener("ended", r); audio.addEventListener("pause", r); audio.addEventListener("error", r); });
+          URL.revokeObjectURL(url);
+          if (currentAudio === audio) currentAudio = null;
+        } catch (e) {
+          // Bei leerem Kontingent kuenftig direkt Browser-Stimme nutzen (kein langsamer Fehlversuch mehr).
+          if (/quota/i.test(e.message)) { elevenDown = true; if (!ttsWarned) { ttsWarned = true; UI.toast("ElevenLabs-Kontingent leer - nutze Browser-Stimme.", "error"); } }
+          await browserSpeak(text);
+        }
+      }
+    } finally { UI.setLevel(0); UI.setVoiceState("idle"); relistenWake(); }
   }
 
   async function run(text) {
