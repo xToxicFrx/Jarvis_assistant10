@@ -70,9 +70,34 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
   // ---- Verlauf (ohne System-Prompt; wird je Runde frisch gesetzt) ----
   let history = [];
   try { const saved = JSON.parse(localStorage.getItem("jarvis_history") || "[]"); if (Array.isArray(saved)) history = saved; } catch (e) {}
-  while (history.length && history[0].role === "tool") history.shift();
+  history = sanitizeHistory(history);
   function persist() { try { localStorage.setItem("jarvis_history", JSON.stringify(history)); } catch (e) {} }
   function trimHistory() { while (history.length > 24) history.shift(); while (history.length && history[0].role === "tool") history.shift(); persist(); }
+
+  // Sorgt dafuer, dass der Verlauf fuer OpenAI gueltig ist: jede Assistenten-
+  // Nachricht mit tool_calls MUSS direkt von Tool-Antworten gefolgt sein. Bricht
+  // ein Werkzeug-Schritt ab (z.B. Reload mittendrin), bleibt sonst eine "verwaiste"
+  // tool_calls-Nachricht zurueck -> OpenAI 502. Diese wird hier entfernt/repariert.
+  function sanitizeHistory(list) {
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      if (!m) continue;
+      if (m.role === "assistant" && Array.isArray(m.tool_calls) && m.tool_calls.length) {
+        const ids = m.tool_calls.map((c) => c.id);
+        const resp = [];
+        let j = i + 1;
+        while (j < list.length && list[j] && list[j].role === "tool" && ids.includes(list[j].tool_call_id)) { resp.push(list[j]); j++; }
+        const answered = new Set(resp.map((r) => r.tool_call_id));
+        if (ids.every((id) => answered.has(id))) { out.push(m); resp.forEach((r) => out.push(r)); }
+        else if (m.content && String(m.content).trim()) { out.push({ role: "assistant", content: m.content }); }
+        i = j - 1;
+      } else if (m.role === "tool") {
+        // verwaiste Tool-Antwort -> weglassen
+      } else { out.push(m); }
+    }
+    return out;
+  }
 
   // ---- Wetter + Uhr ----
   let myLat = 47.37, myLon = 8.54;
@@ -94,7 +119,7 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
     history.push({ role: "user", content: userText }); trimHistory();
     let rounds = 0;
     while (rounds++ < 6) {
-      const messages = [systemPrompt, { role: "system", content: "AKTUELLER STAND:\n" + Store.snapshot() }, ...history];
+      const messages = [systemPrompt, { role: "system", content: "AKTUELLER STAND:\n" + Store.snapshot() }, ...sanitizeHistory(history)];
       const { message } = await Auth.apiFetch("/api/chat", { json: { messages, tools: TOOL_SCHEMAS } });
       history.push(message); trimHistory();
       if (message.tool_calls && message.tool_calls.length) {
@@ -111,28 +136,63 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
   }
 
   // ---- TTS ----
+  // Kostenlose Notfall-Stimme: eingebaute Browser-Sprachausgabe (wenn ElevenLabs
+  // nicht geht, z.B. Kontingent leer). Unbegrenzt, dafuer etwas einfacher.
+  let ttsWarned = false;
+  let currentAudio = null;     // laufende ElevenLabs-Audiowiedergabe
+  let interactionId = 0;       // verwirft veraltete Antworten
+  // Stoppt JEDE laufende Sprachausgabe sofort (ElevenLabs-Audio + Browser-Stimme).
+  function stopSpeaking() {
+    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
+    UI.setLevel(0);
+  }
+  function browserSpeak(text) {
+    return new Promise((resolve) => {
+      if (!("speechSynthesis" in window)) { resolve(); return; }
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "de-DE";
+        const vs = window.speechSynthesis.getVoices();
+        const de = vs.find((v) => /de(-|_)/i.test(v.lang));
+        if (de) u.voice = de;
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
+        UI.setLevel(0.5);
+        window.speechSynthesis.speak(u);
+      } catch (e) { resolve(); }
+    });
+  }
+
   async function speak(text) {
     if (!text) { UI.setVoiceState("idle"); return; }
+    stopSpeaking();
     UI.setVoiceState("speaking"); UI.setLevel(0.4);
     try {
       const blob = await Auth.apiFetch("/api/tts", { json: { text }, audio: true });
-      const url = URL.createObjectURL(blob); const audio = new Audio(url);
+      const url = URL.createObjectURL(blob); const audio = new Audio(url); currentAudio = audio;
       try {
         const ac = new AudioContext(); const src = ac.createMediaElementSource(audio); const an = ac.createAnalyser(); an.fftSize = 128; src.connect(an); an.connect(ac.destination);
         const buf = new Uint8Array(an.frequencyBinCount);
         (function loop() { if (audio.ended || audio.paused) { UI.setLevel(0); return; } an.getByteFrequencyData(buf); UI.setLevel(buf.reduce((a, b) => a + b, 0) / buf.length / 128); requestAnimationFrame(loop); })();
         await audio.play();
       } catch (e) { await audio.play(); }
-      await new Promise((r) => audio.addEventListener("ended", r));
+      await new Promise((r) => { audio.addEventListener("ended", r); audio.addEventListener("pause", r); audio.addEventListener("error", r); });
       URL.revokeObjectURL(url);
-    } catch (e) { UI.toast("Stimme-Fehler: " + e.message, "error"); }
+      if (currentAudio === audio) currentAudio = null;
+    } catch (e) {
+      if (/quota/i.test(e.message) && !ttsWarned) { ttsWarned = true; UI.toast("ElevenLabs-Kontingent leer - nutze Browser-Stimme.", "error"); }
+      await browserSpeak(text);
+    }
     finally { UI.setLevel(0); UI.setVoiceState("idle"); relistenWake(); }
   }
 
   async function run(text) {
     if (!text || !text.trim()) return;
+    const myId = ++interactionId;
     UI.setTranscript("Du", text); UI.setVoiceState("thinking");
-    try { const reply = await converse(text.trim()); UI.setTranscript("Jarvis", reply); await speak(reply); }
+    try { const reply = await converse(text.trim()); if (myId !== interactionId) { UI.setVoiceState("idle"); return; } UI.setTranscript("Jarvis", reply); await speak(reply); }
     catch (e) { console.error(e); UI.setTranscript("Fehler", e.message); UI.setVoiceState("idle"); UI.toast(e.message, "error"); }
   }
 
@@ -141,12 +201,14 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
   $("resetBtn").addEventListener("click", () => { history = []; persist(); UI.setTranscript("Jarvis", "Gespraech zurueckgesetzt."); UI.toast("Gespraech zurueckgesetzt"); });
 
   // ---- Mikrofon (Push-to-talk) ----
-  let mediaRec = null, chunks = [], micActive = false, currentMime = "audio/webm";
+  let mediaRec = null, chunks = [], micActive = false, currentMime = "audio/webm", recStart = 0;
   function pickMime() { const c = ["audio/webm", "audio/mp4", "audio/ogg"]; for (const m of c) if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; return ""; }
   async function startMic() {
-    if (micActive) return; micActive = true; chunks = [];
+    if (micActive) return;
+    stopSpeaking(); interactionId++;
+    micActive = true; chunks = [];
     $("micBtn").classList.add("recording"); UI.setVoiceState("listening");
-    try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const mime = pickMime(); mediaRec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); currentMime = mediaRec.mimeType || mime || "audio/webm"; mediaRec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; mediaRec.start(); }
+    try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const mime = pickMime(); mediaRec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); currentMime = mediaRec.mimeType || mime || "audio/webm"; mediaRec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; recStart = Date.now(); mediaRec.start(200); }
     catch (e) { micActive = false; $("micBtn").classList.remove("recording"); UI.setVoiceState("idle"); UI.toast("Kein Mikrofon-Zugriff", "error"); }
   }
   async function stopMic() {
@@ -155,7 +217,9 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
     await new Promise((r) => { mediaRec.onstop = r; mediaRec.stop(); });
     mediaRec.stream.getTracks().forEach((t) => t.stop());
     const blob = new Blob(chunks, { type: currentMime });
-    try { const b64 = await blobToBase64(blob); const d = await Auth.apiFetch("/api/stt", { json: { audio: b64, mime: currentMime } }); if (d.text && d.text.trim()) run(d.text); else { UI.setVoiceState("idle"); relistenWake(); } }
+    const dur = Date.now() - recStart;
+    if (blob.size < 1200 || dur < 400) { UI.setVoiceState("idle"); UI.toast("Aufnahme zu kurz - Knopf gedrueckt halten und sprechen."); relistenWake(); return; }
+    try { const b64 = await blobToBase64(blob); const d = await Auth.apiFetch("/api/stt", { json: { audio: b64, mime: currentMime } }); if (d.text && d.text.trim()) { relistenWake(); run(d.text); } else { UI.setVoiceState("idle"); UI.toast("Nichts verstanden - bitte nochmal."); relistenWake(); } }
     catch (e) { console.error(e); UI.setVoiceState("idle"); UI.toast(e.message, "error"); relistenWake(); }
   }
   function blobToBase64(blob) { return new Promise((resolve) => { const r = new FileReader(); r.onloadend = () => resolve(r.result.split(",")[1]); r.readAsDataURL(blob); }); }
@@ -177,7 +241,7 @@ Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric",
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { const b = $("wakeBtn"); if (b) { b.disabled = true; b.title = "Wake-Word braucht Chrome/Edge"; } return; }
     recognition = new SR(); recognition.lang = "de-DE"; recognition.continuous = true; recognition.interimResults = true;
-    recognition.onresult = (e) => { if (micActive) return; const txt = Array.from(e.results).map((r) => r[0].transcript).join(" ").toLowerCase(); if (/(jarvis|jervis|dscharvis|service)/.test(txt)) { try { recognition.stop(); } catch (er) {} UI.toast("Wake-Word erkannt"); startMic(); setTimeout(() => { if (micActive) stopMic(); }, 4500); } };
+    recognition.onresult = (e) => { if (micActive) return; const txt = Array.from(e.results).map((r) => r[0].transcript).join(" ").toLowerCase(); if (/(jarvis|jervis|dscharvis|tscharvis)/.test(txt)) { try { recognition.stop(); } catch (er) {} UI.toast("Wake-Word erkannt"); startMic(); setTimeout(() => { if (micActive) stopMic(); }, 4500); } };
     recognition.onend = () => relistenWake();
     recognition.onerror = () => {};
   })();
