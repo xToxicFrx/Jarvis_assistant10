@@ -6,8 +6,9 @@
 # Vercel
 .vercel
 
-# Node
+# Node (jsdom ist nur fuer den optionalen DOM-Test; Lockfile nicht committen -> keine Build-Abhaengigkeit)
 node_modules/
+package-lock.json
 
 # Betriebssystem / Editor
 .DS_Store

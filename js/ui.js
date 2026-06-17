@@ -303,6 +303,7 @@ window.UI = (function () {
     return card;
   }
 
+  let _firstRender = true;
   function render(s) {
     const root = document.getElementById("dashboard");
     if (!root) return;
@@ -311,18 +312,38 @@ window.UI = (function () {
       buildTimetable(s), buildReminders(s), buildGrades(s), buildVocab(s), buildHabits(s),
       buildNotes(s), buildEvents(s), buildGoals(s), buildBudget(s), buildCalendar(s), buildStats(s),
     );
+    if (_firstRender) {
+      _firstRender = false;
+      // Karten fliegen einmalig gestaffelt herein. Spaetere Re-Renders erzeugen neue
+      // (klassenlose) Karten -> keine Wiederholung der Animation bei jeder Aenderung.
+      if (!reduceMotion()) {
+        const kids = root.children;
+        for (let i = 0; i < kids.length; i++) { kids[i].classList.add("card-enter"); kids[i].style.animationDelay = (i * 0.045).toFixed(3) + "s"; }
+      }
+    }
   }
 
   // ============================================================
   // Modals
   // ============================================================
-  function closeModal() { const r = document.getElementById("modalRoot"); if (r) clear(r); }
+  function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function removeModalBack(back) {
+    if (!back || back.dataset.closing) return;
+    back.dataset.closing = "1";
+    if (reduceMotion()) { back.remove(); return; }
+    back.classList.add("closing");
+    let done = false; const fin = () => { if (done) return; done = true; back.remove(); };
+    back.addEventListener("animationend", fin, { once: true });
+    setTimeout(fin, 400); // Fallback, falls animationend ausbleibt
+  }
+  function closeModal() { const r = document.getElementById("modalRoot"); if (r) removeModalBack(r.querySelector(".modal-back")); }
   function openModal(title, bodyEl, opts) {
-    closeModal();
+    const r = document.getElementById("modalRoot"); if (!r) return;
+    const existing = r.querySelector(".modal-back"); if (existing) existing.remove(); // sofort weg -> kein Stapeln/Doppel-Backdrop
     const head = el("div", { class: "modal-head" }, [el("h3", { text: title }), iconBtn("i-x", "Schliessen", closeModal)]);
     const modal = el("div", { class: "modal" + (opts && opts.wide ? " wide" : "") }, [head, bodyEl]);
     const back = el("div", { class: "modal-back", onclick: (e) => { if (e.target === back) closeModal(); } }, modal);
-    document.getElementById("modalRoot").appendChild(back);
+    r.appendChild(back);
     setTimeout(() => { const i = modal.querySelector("input,textarea,select"); if (i) i.focus(); }, 40);
   }
   function subjectDatalist() { return el("datalist", { id: "subjectList" }, Store.subjects().map((x) => el("option", { value: x }))); }
@@ -587,18 +608,27 @@ window.UI = (function () {
 
   // ---------- Theme / Accent ----------
   function resolveTheme(theme) { let t = theme || (Store.get().settings.theme) || "system"; if (t === "system") t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; return t; }
+  let _themeReady = false, _themeFadeT = 0;
+  function crossfadeColors() {
+    if (!_themeReady || reduceMotion()) return; // erster Aufruf (Start) ohne Animation
+    const r = document.documentElement; r.classList.add("theme-anim");
+    clearTimeout(_themeFadeT); _themeFadeT = setTimeout(() => r.classList.remove("theme-anim"), 420);
+  }
   function applyAccentVars() {
+    crossfadeColors();
     const id = (Store.get().settings.accent) || "blue"; const a = CONST.ACCENTS[id] || CONST.ACCENTS.blue;
     const dark = document.documentElement.getAttribute("data-theme") === "dark";
     document.documentElement.style.setProperty("--accent", a.color);
     document.documentElement.style.setProperty("--accent-weak", dark ? a.weakDark : a.weak);
   }
   function applyTheme(theme) {
+    crossfadeColors();
     const t = resolveTheme(theme);
     document.documentElement.setAttribute("data-theme", t);
     const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute("content", t === "dark" ? "#16181c" : "#ffffff");
     const btn = document.getElementById("themeBtn"); if (btn) btn.replaceChildren(icon(t === "dark" ? "i-sun" : "i-moon"));
     applyAccentVars();
+    _themeReady = true;
   }
   function toggleTheme() { const cur = document.documentElement.getAttribute("data-theme"); const next = cur === "dark" ? "light" : "dark"; Store.setSetting("theme", next); applyTheme(next); }
 
