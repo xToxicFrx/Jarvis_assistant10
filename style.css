@@ -46,7 +46,7 @@ body::before {
 .icon { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Buttons */
-.btn { appearance: none; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: var(--radius-sm); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: background .15s, border-color .15s, transform .05s; }
+.btn { position: relative; overflow: hidden; appearance: none; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: var(--radius-sm); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: background .15s, border-color .15s, transform .08s; }
 .btn .icon { width: 17px; height: 17px; }
 .btn:hover { background: var(--surface-2); }
 .btn:active { transform: translateY(1px); }
@@ -59,7 +59,8 @@ body::before {
 .btn-mb { margin-bottom: 8px; }
 .btn-sm { padding: 7px 11px; font-size: 13px; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.icon-btn { appearance: none; border: 1px solid transparent; background: transparent; color: var(--text); width: 42px; height: 42px; min-width: 42px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s, color .15s; }
+.icon-btn { position: relative; overflow: hidden; appearance: none; border: 1px solid transparent; background: transparent; color: var(--text); width: 42px; height: 42px; min-width: 42px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s, color .15s; }
+.icon-btn:active { transform: scale(.9); }
 .icon-btn:hover { background: var(--surface-2); }
 .icon-btn:disabled { opacity: .4; cursor: not-allowed; }
 .icon-btn.active { background: var(--accent-weak); color: var(--accent); }
@@ -95,11 +96,19 @@ body::before {
 @media (min-width: 720px) { .dashboard { grid-template-columns: 1fr 1fr; } .card-wide { grid-column: 1 / -1; } }
 @media (min-width: 1080px) { .dashboard { grid-template-columns: repeat(3, 1fr); } .card-wide { grid-column: span 2; } }
 
-.card { background: color-mix(in srgb, var(--surface) 84%, transparent); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; min-width: 0; transition: transform .22s cubic-bezier(.25,.8,.4,1), box-shadow .22s ease, border-color .22s ease; }
-@media (hover: hover) { .card:hover { transform: translateY(-6px); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); box-shadow: 0 4px 10px rgba(20,22,28,.10), 0 22px 48px rgba(20,22,28,.16); } }
-:root[data-theme="dark"] .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.42), 0 24px 54px rgba(0,0,0,.55); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
-.card-enter { animation: cardIn .6s cubic-bezier(.22,.85,.3,1) backwards; }
-@keyframes cardIn { from { opacity: 0; transform: translateY(30px) scale(.955); } to { opacity: 1; transform: none; } }
+.card { position: relative; background: color-mix(in srgb, var(--surface) 84%, transparent); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; min-width: 0; transition: transform .18s cubic-bezier(.25,.8,.4,1), box-shadow .22s ease, border-color .22s ease; }
+/* 3D nur bei Hover/Tilt aktiv -> im Ruhezustand keine GPU-Ebene, scharfer Text */
+@media (hover: hover) {
+  .card:hover, .card.tilting { will-change: transform; transform: perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--ty,-6px)) scale(var(--cs,1.02)); }
+  .card.tilting { transition: box-shadow .22s ease, border-color .22s ease; }
+  .card:hover { border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); box-shadow: 0 6px 14px rgba(20,22,28,.10), 0 26px 54px rgba(20,22,28,.18); }
+}
+:root[data-theme="dark"] .card:hover { box-shadow: 0 6px 16px rgba(0,0,0,.45), 0 28px 60px rgba(0,0,0,.6); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+/* Glanz/Glow folgt dem Cursor (3D-Tilt-Highlight) */
+.card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s ease; background: radial-gradient(240px circle at var(--mx,50%) var(--my,50%), color-mix(in srgb, var(--accent) 20%, transparent), transparent 55%); }
+@media (hover: hover) { .card:hover::after { opacity: 1; } }
+.card-enter { animation: cardIn .65s cubic-bezier(.22,.85,.3,1) backwards; }
+@keyframes cardIn { from { opacity: 0; transform: perspective(1000px) translateY(42px) rotateX(-14deg) scale(.94); } to { opacity: 1; transform: perspective(1000px) translateY(0) rotateX(0deg) scale(1); } }
 .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .card-head > .icon { width: 18px; height: 18px; color: var(--muted); }
 .card-title { font-weight: 700; font-size: 15px; flex: 1; }
@@ -297,10 +306,20 @@ body::before {
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes backdropOut { from { opacity: 1; } to { opacity: 0; } }
-@keyframes modalIn { from { opacity: 0; transform: translateY(22px) scale(.97); } to { opacity: 1; transform: none; } }
-@keyframes modalOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes modalIn { from { opacity: 0; transform: perspective(1200px) translateY(26px) rotateX(14deg) scale(.95); } to { opacity: 1; transform: perspective(1200px) translateY(0) rotateX(0deg) scale(1); } }
+@keyframes modalOut { from { opacity: 1; transform: perspective(1200px) translateY(0) rotateX(0deg) scale(1); } to { opacity: 0; transform: perspective(1200px) translateY(16px) rotateX(10deg) scale(.97); } }
 
 /* Theme-/Akzent-Wechsel: kurzes, weiches Umblenden der Farben (per JS-Klasse fuer ~0.4s aktiv). */
 .theme-anim, .theme-anim * { transition: background-color .35s ease, color .35s ease, border-color .35s ease, fill .35s ease, stroke .35s ease, box-shadow .35s ease !important; }
+
+/* Ripple auf Buttons */
+.ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: .28; transform: scale(0); pointer-events: none; animation: ripple .6s ease-out forwards; }
+@keyframes ripple { to { transform: scale(2.4); opacity: 0; } }
+
+/* Konfetti-Overlay (z. B. bei erledigter Aufgabe) */
+.fx-confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 300; pointer-events: none; }
+
+/* Nutzer-Schalter "Animationen reduzieren" (wie prefers-reduced-motion) */
+html.reduce-anim *, html.reduce-anim *::before, html.reduce-anim *::after { animation: none !important; transition: none !important; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
