@@ -22,6 +22,22 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
 body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+/* Aurora-Hintergrund: dezente, langsam treibende Akzent-Wolken hinter allem (nur transform animiert -> GPU). */
+body::before {
+  content: ""; position: fixed; inset: -25vmax; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(38vmax 38vmax at 18% 22%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 60%),
+    radial-gradient(32vmax 32vmax at 82% 14%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 62%),
+    radial-gradient(42vmax 42vmax at 72% 86%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 64%);
+  filter: blur(26px) saturate(1.15); opacity: .5;
+  animation: auroraDrift 30s ease-in-out infinite alternate; will-change: transform;
+}
+:root[data-theme="dark"] body::before { opacity: .4; }
+@keyframes auroraDrift {
+  0%   { transform: translate3d(-2vmax, 1vmax, 0) scale(1) rotate(0deg); }
+  50%  { transform: translate3d(2vmax, -2vmax, 0) scale(1.07) rotate(4deg); }
+  100% { transform: translate3d(-1vmax, 2vmax, 0) scale(1.04) rotate(-3deg); }
+}
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
@@ -79,7 +95,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 @media (min-width: 720px) { .dashboard { grid-template-columns: 1fr 1fr; } .card-wide { grid-column: 1 / -1; } }
 @media (min-width: 1080px) { .dashboard { grid-template-columns: repeat(3, 1fr); } .card-wide { grid-column: span 2; } }
 
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; min-width: 0; transition: transform .22s cubic-bezier(.25,.8,.4,1), box-shadow .22s ease, border-color .22s ease; }
+@media (hover: hover) { .card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow: 0 2px 6px rgba(20,22,28,.07), 0 14px 34px rgba(20,22,28,.10); } }
+:root[data-theme="dark"] .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.35), 0 16px 40px rgba(0,0,0,.42); }
+.card-enter { animation: cardIn .5s cubic-bezier(.22,.85,.3,1) backwards; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
 .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .card-head > .icon { width: 18px; height: 18px; color: var(--muted); }
 .card-title { font-weight: 700; font-size: 15px; flex: 1; }
@@ -235,9 +255,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .voice-state[data-state="speaking"] .dot { background: var(--success); opacity: 1; transform: scale(calc(1 + var(--level, 0))); }
 
 /* Modal */
-.modal-back { position: fixed; inset: 0; z-index: 100; background: rgba(15,17,22,.45); display: flex; align-items: flex-end; justify-content: center; }
+.modal-back { position: fixed; inset: 0; z-index: 100; background: rgba(15,17,22,.45); display: flex; align-items: flex-end; justify-content: center; animation: backdropIn .22s ease both; }
+.modal-back.closing { animation: backdropOut .2s ease both; }
+.modal-back.closing .modal { animation: modalOut .2s ease-in both; }
 @media (min-width: 560px) { .modal-back { align-items: center; padding: 20px; } }
-.modal { background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 460px; border-radius: 18px 18px 0 0; box-shadow: var(--shadow); max-height: 92vh; overflow: auto; animation: rise .18s ease-out; }
+.modal { background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 460px; border-radius: 18px 18px 0 0; box-shadow: var(--shadow); max-height: 92vh; overflow: auto; animation: modalIn .28s cubic-bezier(.25,.9,.35,1) both; }
 .modal.wide { max-width: 560px; }
 @media (min-width: 560px) { .modal { border-radius: 18px; } }
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 4px; }
@@ -273,4 +295,12 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes backdropOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes modalIn { from { opacity: 0; transform: translateY(22px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes modalOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(14px) scale(.98); } }
+
+/* Theme-/Akzent-Wechsel: kurzes, weiches Umblenden der Farben (per JS-Klasse fuer ~0.4s aktiv). */
+.theme-anim, .theme-anim * { transition: background-color .35s ease, color .35s ease, border-color .35s ease, fill .35s ease, stroke .35s ease, box-shadow .35s ease !important; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
