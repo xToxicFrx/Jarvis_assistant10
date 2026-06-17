@@ -53,6 +53,31 @@ window.Charts = (function () {
     return barChart(data, { max: 5, fmt: (v) => U.round(6 - v, 1) });
   }
 
+  // Linien-Sparkline auf der Notenskala (1..6). Oben = bessere Note. area + Linie + letzter Punkt.
+  function lineChart(values) {
+    const W = 280, H = 90, pad = 8, min = 1, max = 6, n = values.length;
+    if (n < 2) return null;
+    const dx = (W - pad * 2) / (n - 1);
+    const yOf = (v) => pad + (H - pad * 2) * ((Math.min(max, Math.max(min, v)) - min) / (max - min));
+    const pts = values.map((v, i) => [pad + i * dx, yOf(v)]);
+    const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", preserveAspectRatio: "none" });
+    svg.appendChild(s("path", { d: line + ` L ${pts[n - 1][0].toFixed(1)} ${H} L ${pts[0][0].toFixed(1)} ${H} Z`, class: "spark-area" }));
+    svg.appendChild(s("path", { d: line, class: "spark-line" }));
+    const last = pts[n - 1];
+    svg.appendChild(s("circle", { cx: last[0].toFixed(1), cy: last[1].toFixed(1), r: 3.2, class: "spark-dot" }));
+    return svg;
+  }
+
+  // Noten-Verlauf: laufender gewichteter Schnitt aller Noten in Datums-Reihenfolge.
+  function gradeTrend() {
+    const g = Store.get().grades.filter((x) => x.date).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    if (g.length < 2) return null;
+    let sum = 0, w = 0; const series = [];
+    g.forEach((x) => { sum += x.value * (x.weight || 1); w += (x.weight || 1); series.push(U.round(sum / w, 2)); });
+    return lineChart(series);
+  }
+
   function habitStrip(habit, days) {
     days = days || 14;
     const set = new Set(habit.history);
@@ -65,5 +90,5 @@ window.Charts = (function () {
     return wrap;
   }
 
-  return { barChart, weekFocus, gradeBars, habitStrip };
+  return { barChart, weekFocus, gradeBars, habitStrip, lineChart, gradeTrend };
 })();
