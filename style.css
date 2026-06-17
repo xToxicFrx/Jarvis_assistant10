@@ -34,9 +34,9 @@ body::before {
 }
 :root[data-theme="dark"] body::before { opacity: .65; }
 @keyframes auroraDrift {
-  0%   { transform: translate3d(-2vmax, 1vmax, 0) scale(1) rotate(0deg); }
-  50%  { transform: translate3d(2vmax, -2vmax, 0) scale(1.07) rotate(4deg); }
-  100% { transform: translate3d(-1vmax, 2vmax, 0) scale(1.04) rotate(-3deg); }
+  0%   { transform: translate3d(-4vmax, 2vmax, 0) scale(1) rotate(0deg); }
+  50%  { transform: translate3d(4vmax, -4vmax, 0) scale(1.12) rotate(7deg); }
+  100% { transform: translate3d(-3vmax, 4vmax, 0) scale(1.07) rotate(-5deg); }
 }
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .hidden { display: none !important; }
@@ -96,8 +96,8 @@ body::before {
 @media (min-width: 1080px) { .dashboard { grid-template-columns: repeat(3, 1fr); } .card-wide { grid-column: span 2; } }
 
 .card { background: color-mix(in srgb, var(--surface) 84%, transparent); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; min-width: 0; transition: transform .22s cubic-bezier(.25,.8,.4,1), box-shadow .22s ease, border-color .22s ease; }
-@media (hover: hover) { .card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow: 0 2px 6px rgba(20,22,28,.07), 0 14px 34px rgba(20,22,28,.10); } }
-:root[data-theme="dark"] .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.35), 0 16px 40px rgba(0,0,0,.42); }
+@media (hover: hover) { .card:hover { transform: translateY(-6px); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); box-shadow: 0 4px 10px rgba(20,22,28,.10), 0 22px 48px rgba(20,22,28,.16); } }
+:root[data-theme="dark"] .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.42), 0 24px 54px rgba(0,0,0,.55); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
 .card-enter { animation: cardIn .6s cubic-bezier(.22,.85,.3,1) backwards; }
 @keyframes cardIn { from { opacity: 0; transform: translateY(30px) scale(.955); } to { opacity: 1; transform: none; } }
 .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
@@ -235,14 +235,14 @@ body::before {
 .assistant { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
 .assistant-inner { max-width: 900px; margin: 0 auto; }
 /* Sprach-Orb: transparent (kein Kasten), fliegt von rechts herein. Nur transform+opacity -> GPU. */
-.orb-wrap { position: fixed; right: 14px; bottom: 88px; width: 150px; height: 150px; z-index: 40; pointer-events: none; opacity: 0; transform: translateX(170%) scale(.85); transition: transform .5s cubic-bezier(.34,1.56,.64,1), opacity .35s ease; will-change: transform, opacity; }
+.orb-wrap { position: fixed; right: 12px; bottom: 86px; width: 172px; height: 172px; z-index: 40; pointer-events: none; opacity: 0; transform: translateX(180%) scale(.8); transition: transform .55s cubic-bezier(.34,1.56,.64,1), opacity .35s ease; will-change: transform, opacity; }
 .orb-wrap.show { opacity: 1; transform: translateX(0) scale(1); }
-.orb-wrap.show .orb { animation: orbFloat 4s ease-in-out infinite; }
-.orb-wrap::after { content: ""; position: absolute; inset: 16%; border-radius: 50%; background: radial-gradient(circle, var(--accent), transparent 70%); opacity: .14; filter: blur(16px); z-index: -1; }
-.orb-wrap.show::after { animation: orbGlow 3s ease-in-out infinite; }
-.orb { width: 150px; height: 150px; display: block; }
-@keyframes orbFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-@keyframes orbGlow { 0%, 100% { opacity: .1; } 50% { opacity: .3; } }
+.orb-wrap.show .orb { animation: orbFloat 4.5s ease-in-out infinite; }
+.orb-wrap::after { content: ""; position: absolute; inset: 4%; border-radius: 50%; background: radial-gradient(circle, var(--accent), transparent 66%); opacity: .2; filter: blur(22px); z-index: -1; }
+.orb-wrap.show::after { animation: orbGlow 2.6s ease-in-out infinite; }
+.orb { width: 172px; height: 172px; display: block; }
+@keyframes orbFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-9px) rotate(1.5deg); } }
+@keyframes orbGlow { 0%, 100% { opacity: .16; transform: scale(.88); } 50% { opacity: .48; transform: scale(1.14); } }
 .transcript { font-size: 13px; margin: 0 6px 8px; min-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .transcript b { color: var(--text); }
 .assistant-row { display: flex; align-items: center; gap: 6px; }
 .assistant-row #textInput { flex: 1; min-width: 0; padding: 11px 14px; font: inherit; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); outline: none; }
