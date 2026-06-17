@@ -28,7 +28,7 @@ window.UI = (function () {
   // ---------- Aufgaben-Eintrag ----------
   function taskItem(t, opts) {
     opts = opts || {};
-    const check = el("button", { class: "check", type: "button", title: t.done ? "Wieder offen" : "Erledigt", onclick: () => t.done ? Store.updateTask(t.id, { done: false }) : Store.completeTask(t.id) }, t.done ? icon("i-check") : null);
+    const check = el("button", { class: "check", type: "button", title: t.done ? "Wieder offen" : "Erledigt", onclick: (e) => { if (t.done) { Store.updateTask(t.id, { done: false }); } else { const r = e.currentTarget.getBoundingClientRect(); burstConfetti(r.left + r.width / 2, r.top + r.height / 2); Store.completeTask(t.id); } } }, t.done ? icon("i-check") : null);
     const meta = el("div", { class: "task-meta" }, el("span", { class: "prio " + t.priority }));
     if (t.due) meta.appendChild(dueChip(t.due));
     if (t.repeat) meta.appendChild(chip(t.repeat.freq === "weekly" ? "woechentlich" : "taeglich", "repeat"));
@@ -326,7 +326,8 @@ window.UI = (function () {
   // ============================================================
   // Modals
   // ============================================================
-  function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function prefersReduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function reduceMotion() { try { if (window.Store && Store.get().settings && Store.get().settings.reduceAnim) return true; } catch (e) {} return prefersReduced(); }
   function removeModalBack(back) {
     if (!back || back.dataset.closing) return;
     back.dataset.closing = "1";
@@ -530,6 +531,7 @@ window.UI = (function () {
     const encBox = seg([["1", "An (empfohlen)"], ["0", "Aus"]], s.encryptCloud ? "1" : "0", (v) => Store.setSetting("encryptCloud", v === "1"));
     const briefBox = seg([["1", "An"], ["0", "Aus"]], s.briefingEnabled ? "1" : "0", (v) => Store.setSetting("briefingEnabled", v === "1"));
     const voiceBox = seg([["auto", "ElevenLabs"], ["browser", "Browser"], ["off", "Aus"]], s.voiceMode || "auto", (v) => Store.setSetting("voiceMode", v));
+    const animBox = seg([["full", "Voll"], ["reduced", "Reduziert"]], s.reduceAnim ? "reduced" : "full", (v) => { Store.setSetting("reduceAnim", v === "reduced"); applyAnimPref(); });
     const cloud = el("div", { class: "cloud-pill" + (Store.cloudEnabled ? " on" : "") }, [el("span", { class: "d" }), el("span", { text: Store.cloudEnabled ? (s.encryptCloud ? "Cloud-Sync aktiv, verschluesselt" : "Cloud-Sync aktiv") : "Cloud-Sync aus (nur dieses Geraet)" })]);
     const fileIn = el("input", { type: "file", accept: "application/json" }); fileIn.addEventListener("change", importBackup);
     const dataRow = el("div", { class: "btn-row" }, [el("button", { class: "btn", type: "button", onclick: exportBackup }, [icon("i-download"), document.createTextNode("Backup")]), el("button", { class: "btn", type: "button", onclick: () => fileIn.click() }, [icon("i-upload"), document.createTextNode("Wiederherstellen")]), fileIn]);
@@ -540,6 +542,7 @@ window.UI = (function () {
       field("Cloud verschluesseln (Zero-Knowledge)", encBox.box),
       field("Tagesbriefing", briefBox.box),
       field("Stimme", voiceBox.box),
+      field("Animationen", animBox.box),
       field("Benachrichtigungen", notif),
       field("Daten", dataRow), field("Synchronisierung", cloud),
       el("div", { class: "muted small", text: "Version " + CONST.APP_VERSION + " · abmelden schliesst die Sitzung." }),
@@ -680,8 +683,65 @@ window.UI = (function () {
     ]);
   }
 
+  // ============================================================
+  // Effekte: Konfetti, 3D-Tilt (Cursor), Ripple
+  // ============================================================
+  function cssColor(name, fallback) { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fallback; }
+  function burstConfetti(x, y) {
+    if (reduceMotion() || !document.body) return;
+    const cv = el("canvas", { class: "fx-confetti" });
+    const cx = cv.getContext && cv.getContext("2d"); if (!cx) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.floor((window.innerWidth || 360) * dpr); cv.height = Math.floor((window.innerHeight || 640) * dpr);
+    document.body.appendChild(cv);
+    const cols = [cssColor("--accent", "#3b6df6"), cssColor("--success", "#16a34a"), cssColor("--warn", "#d97706"), "#ffffff"];
+    const N = 90, ps = [];
+    for (let i = 0; i < N; i++) { const a = Math.random() * Math.PI * 2, sp = (4 + Math.random() * 8) * dpr; ps.push({ x: x * dpr, y: y * dpr, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4 * dpr, g: 0.22 * dpr, life: 1, col: cols[(Math.random() * cols.length) | 0], r: (3 + Math.random() * 4) * dpr, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.5 }); }
+    let last = performance.now();
+    (function frame(now) {
+      const dt = Math.min(2.5, (now - last) / 16.67); last = now;
+      cx.clearRect(0, 0, cv.width, cv.height); let alive = false;
+      for (const p of ps) { if (p.life <= 0) continue; p.vy += p.g * dt; p.vx *= 0.99; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.life -= 0.011 * dt; if (p.life > 0 && p.y < cv.height + 40) { alive = true; cx.save(); cx.globalAlpha = Math.max(0, p.life); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillStyle = p.col; cx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.62); cx.restore(); } }
+      if (alive) requestAnimationFrame(frame); else cv.remove();
+    })(last);
+  }
+  function initTilt() {
+    const dash = document.getElementById("dashboard");
+    if (!dash || !(window.matchMedia && window.matchMedia("(hover: hover)").matches)) return;
+    let raf = 0, card = null, mx = 0, my = 0;
+    const apply = () => {
+      raf = 0; if (!card) return; const r = card.getBoundingClientRect(); if (!r.width) return;
+      const px = (mx - r.left) / r.width, py = (my - r.top) / r.height, max = 7;
+      card.classList.add("tilting");
+      card.style.setProperty("--ry", ((px - 0.5) * 2 * max).toFixed(2) + "deg");
+      card.style.setProperty("--rx", (-(py - 0.5) * 2 * max).toFixed(2) + "deg");
+      card.style.setProperty("--mx", (px * 100).toFixed(1) + "%");
+      card.style.setProperty("--my", (py * 100).toFixed(1) + "%");
+    };
+    dash.addEventListener("pointermove", (e) => {
+      if (reduceMotion()) return;
+      const c = e.target.closest(".card"); if (!c) return;
+      card = c; mx = e.clientX; my = e.clientY; if (!raf) raf = requestAnimationFrame(apply);
+    });
+    dash.addEventListener("pointerout", (e) => {
+      const c = e.target.closest(".card"); if (c && !c.contains(e.relatedTarget)) { c.classList.remove("tilting"); c.style.removeProperty("--rx"); c.style.removeProperty("--ry"); }
+    });
+  }
+  function initRipple() {
+    document.addEventListener("pointerdown", (e) => {
+      if (reduceMotion() || e.button) return;
+      const b = e.target.closest(".btn, .icon-btn"); if (!b) return;
+      const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height);
+      const s = el("span", { class: "ripple" });
+      s.style.width = s.style.height = d + "px"; s.style.left = (e.clientX - r.left - d / 2) + "px"; s.style.top = (e.clientY - r.top - d / 2) + "px";
+      b.appendChild(s); setTimeout(() => s.remove(), 620);
+    });
+  }
+  function applyAnimPref() { document.documentElement.classList.toggle("reduce-anim", !!(Store.get().settings && Store.get().settings.reduceAnim)); }
+
   function init() {
     applyTheme();
+    applyAnimPref();
     if (window.VoiceOrb) { const orbC = document.getElementById("orb"); if (orbC) VoiceOrb.init(orbC); }
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     if (mq.addEventListener) mq.addEventListener("change", () => { if ((Store.get().settings.theme || "system") === "system") applyTheme(); });
@@ -694,6 +754,7 @@ window.UI = (function () {
 
     if (window.Calendar) Calendar.onDay = openDayDetail;
     registerCommands();
+    initTilt(); initRipple();
 
     Store.subscribe((s) => render(s));
     render(Store.get());
