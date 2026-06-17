@@ -90,5 +90,18 @@ window.Charts = (function () {
     return wrap;
   }
 
-  return { barChart, weekFocus, gradeBars, habitStrip, lineChart, gradeTrend };
+  // Fortschritts-Ring (0..1). Fuellung via CSS-Variablen -> kann einmalig animiert werden.
+  function ring(pct) {
+    pct = Math.max(0, Math.min(1, pct || 0));
+    const r = 20, c = 2 * Math.PI * r;
+    const svg = s("svg", { viewBox: "0 0 48 48", class: "ring", role: "img" });
+    svg.appendChild(s("circle", { cx: 24, cy: 24, r: r, class: "ring-bg" }));
+    const fg = s("circle", { cx: 24, cy: 24, r: r, class: "ring-fg" });
+    fg.style.setProperty("--ring-c", c.toFixed(2));
+    fg.style.setProperty("--ring-o", (c * (1 - pct)).toFixed(2));
+    svg.appendChild(fg);
+    return svg;
+  }
+
+  return { barChart, weekFocus, gradeBars, habitStrip, lineChart, gradeTrend, ring };
 })();
