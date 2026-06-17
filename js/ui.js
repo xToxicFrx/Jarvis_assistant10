@@ -318,7 +318,7 @@ window.UI = (function () {
       // (klassenlose) Karten -> keine Wiederholung der Animation bei jeder Aenderung.
       if (!reduceMotion()) {
         const kids = root.children;
-        for (let i = 0; i < kids.length; i++) { kids[i].classList.add("card-enter"); kids[i].style.animationDelay = (i * 0.045).toFixed(3) + "s"; }
+        for (let i = 0; i < kids.length; i++) { kids[i].classList.add("card-enter"); kids[i].style.animationDelay = (i * 0.06).toFixed(3) + "s"; }
       }
     }
   }
