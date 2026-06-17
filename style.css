@@ -239,6 +239,19 @@ body::before {
 .chart-axis { stroke: var(--border); stroke-width: 1; } .chart-bar { fill: var(--surface-2); } .chart-bar.on { fill: var(--accent); }
 .chart-x { fill: var(--muted); font-size: 8px; } .chart-val { fill: var(--text); font-size: 8px; }
 .stat-title { font-size: 12px; margin-bottom: 6px; }
+/* Sparkline (Noten-Verlauf) */
+.spark-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.spark-area { fill: var(--accent); opacity: .12; } .spark-dot { fill: var(--accent); }
+/* Balken/Linie wachsen einmalig mit dem Karten-Eintritt herein */
+.card-enter .chart-bar { transform-box: fill-box; transform-origin: bottom; animation: barGrow .6s cubic-bezier(.25,.9,.35,1) backwards; animation-delay: .2s; }
+@keyframes barGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.card-enter .spark-area, .card-enter .spark-line { animation: sparkIn .7s ease backwards; animation-delay: .25s; }
+@keyframes sparkIn { from { opacity: 0; } to { opacity: 1; } }
+/* Mini-Filter (z. B. Aufgaben) */
+.mini-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.mini-chip { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+.mini-chip:hover { color: var(--text); }
+.mini-chip.on { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 
 /* Assistent */
 .assistant { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }

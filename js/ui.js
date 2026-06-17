@@ -11,6 +11,7 @@ window.UI = (function () {
   let briefingText = "";
   let pomoTotalMs = 0;
   const expanded = { doneTasks: false, fullWeek: false };
+  const taskFilter = { mode: "all" };
 
   // ---------- gemeinsame Bausteine ----------
   function cardShell(title, iconName, extraClass) {
@@ -107,11 +108,22 @@ window.UI = (function () {
   function buildTasks(s) {
     const { card, head, body } = cardShell("Aufgaben", "i-check");
     const todos = s.tasks.filter((t) => t.type === "todo");
-    const open = todos.filter((t) => !t.done).sort(byDue);
+    const allOpen = todos.filter((t) => !t.done).sort(byDue);
     const done = todos.filter((t) => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-    head.appendChild(pill(open.length)); head.appendChild(iconBtn("i-plus", "Aufgabe hinzufuegen", () => openTaskModal("todo")));
+    head.appendChild(pill(allOpen.length)); head.appendChild(iconBtn("i-plus", "Aufgabe hinzufuegen", () => openTaskModal("todo")));
     card.appendChild(body);
-    if (open.length) open.forEach((t) => body.appendChild(taskItem(t))); else body.appendChild(empty("Keine offenen Aufgaben. Stark!"));
+    const isOverdue = (t) => { const n = U.daysUntil(t.due); return n !== null && n < 0; };
+    const counts = { all: allOpen.length, today: allOpen.filter((t) => U.daysUntil(t.due) === 0).length, overdue: allOpen.filter(isOverdue).length, high: allOpen.filter((t) => t.priority === "high").length };
+    if (allOpen.length) {
+      const defs = [["all", "Alle"], ["today", "Heute"], ["overdue", "Ueberfaellig"], ["high", "Wichtig"]];
+      body.appendChild(el("div", { class: "mini-filter" }, defs.map(([k, lab]) => el("button", { type: "button", class: "mini-chip" + (taskFilter.mode === k ? " on" : ""), onclick: () => { taskFilter.mode = k; render(Store.get()); } }, lab + (counts[k] ? " " + counts[k] : "")))));
+    }
+    let open = allOpen;
+    if (taskFilter.mode === "today") open = allOpen.filter((t) => U.daysUntil(t.due) === 0);
+    else if (taskFilter.mode === "overdue") open = allOpen.filter(isOverdue);
+    else if (taskFilter.mode === "high") open = allOpen.filter((t) => t.priority === "high");
+    if (open.length) open.forEach((t) => body.appendChild(taskItem(t)));
+    else body.appendChild(empty(taskFilter.mode === "all" ? "Keine offenen Aufgaben. Stark!" : "Nichts in diesem Filter."));
     if (done.length) {
       body.appendChild(el("button", { class: "toggle-link", type: "button", onclick: () => { expanded.doneTasks = !expanded.doneTasks; render(Store.get()); } }, expanded.doneTasks ? "Erledigte ausblenden" : `Erledigte anzeigen (${done.length})`));
       if (expanded.doneTasks) done.forEach((t) => body.appendChild(taskItem(t)));
@@ -271,6 +283,8 @@ window.UI = (function () {
     card.appendChild(body);
     body.appendChild(el("div", { class: "stat-title muted", text: "Fokuszeit diese Woche (min)" }));
     body.appendChild(Charts.weekFocus());
+    const trend = Charts.gradeTrend && Charts.gradeTrend();
+    if (trend) { body.appendChild(el("div", { class: "stat-title muted", text: "Noten-Verlauf (oben = besser)" })); body.appendChild(trend); }
     body.appendChild(el("div", { class: "ov-stats" }, [
       el("div", { class: "ov-stat" }, [el("b", { text: String(Store.tasksDoneThisWeek()) }), el("span", { text: "erledigt (Woche)" })]),
       el("div", { class: "ov-stat" }, [el("b", { text: Store.focusThisWeek() + "m" }), el("span", { text: "Fokus (Woche)" })]),
@@ -319,6 +333,7 @@ window.UI = (function () {
       if (!reduceMotion()) {
         const kids = root.children;
         for (let i = 0; i < kids.length; i++) { kids[i].classList.add("card-enter"); kids[i].style.animationDelay = (i * 0.06).toFixed(3) + "s"; }
+        root.querySelectorAll(".ov-stat b").forEach((b) => countUp(b, b.textContent));
       }
     }
   }
@@ -736,6 +751,17 @@ window.UI = (function () {
       s.style.width = s.style.height = d + "px"; s.style.left = (e.clientX - r.left - d / 2) + "px"; s.style.top = (e.clientY - r.top - d / 2) + "px";
       b.appendChild(s); setTimeout(() => s.remove(), 620);
     });
+  }
+  function countUp(node, raw) {
+    const str = String(raw); const m = str.match(/^(-?\d+(?:\.\d+)?)(.*)$/); if (!m) return;
+    const end = parseFloat(m[1]); if (!isFinite(end)) return;
+    const suffix = m[2] || "", dec = (m[1].split(".")[1] || "").length, dur = 750, t0 = performance.now();
+    node.textContent = (dec ? (0).toFixed(dec) : "0") + suffix;
+    (function step(now) {
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3), v = end * e;
+      node.textContent = (dec ? v.toFixed(dec) : Math.round(v).toString()) + suffix;
+      if (p < 1) requestAnimationFrame(step); else node.textContent = str;
+    })(t0);
   }
   function applyAnimPref() { document.documentElement.classList.toggle("reduce-anim", !!(Store.get().settings && Store.get().settings.reduceAnim)); }
 
