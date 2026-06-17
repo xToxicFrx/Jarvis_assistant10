@@ -5,10 +5,10 @@
 // /api/* wird NIE gecacht (Auth + persoenliche Daten).
 // Kein Push bei geschlossener App (das braeuchte Web-Push).
 // ============================================================
-const CACHE = "jarvis-v6";
+const CACHE = "jarvis-v7";
 const ASSETS = [
-  "/", "/index.html", "/style.css?v=20260617e",
-  "/js/store.js?v=20260617e", "/js/reminders.js?v=20260617e", "/js/tools.js?v=20260617e", "/js/ui.js?v=20260617e", "/js/app.js?v=20260617e",
+  "/", "/index.html", "/style.css?v=20260617f",
+  "/js/store.js?v=20260617f", "/js/reminders.js?v=20260617f", "/js/tools.js?v=20260617f", "/js/ui.js?v=20260617f", "/js/app.js?v=20260617f",
   "/manifest.webmanifest", "/icons/icon.svg",
 ];
 

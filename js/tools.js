@@ -86,6 +86,7 @@ const TOOL_SCHEMAS = [
   { type: "function", function: { name: "add_event", description: "Termin (mit Datum/Uhrzeit) anlegen.", parameters: { type: "object", properties: { title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string" }, location: { type: "string" } }, required: ["title", "date"] } } },
   { type: "function", function: { name: "add_goal", description: "Ziel mit Fortschritt anlegen.", parameters: { type: "object", properties: { title: { type: "string" }, target: { type: "number" } }, required: ["title"] } } },
   { type: "function", function: { name: "remove_task", description: "Aufgabe loeschen (per Stichwort oder id).", parameters: { type: "object", properties: { id: { type: "string" }, title: { type: "string", description: "Stichwort." } } } } },
+  { type: "function", function: { name: "add_subtask", description: "Unteraufgabe/Checklistenpunkt zu einer bestehenden Aufgabe hinzufuegen.", parameters: { type: "object", properties: { task: { type: "string", description: "Aufgabe (Stichwort oder id)." }, title: { type: "string" } }, required: ["task", "title"] } } },
   { type: "function", function: { name: "list_events", description: "Kommende Termine auflisten.", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "list_goals", description: "Ziele mit Fortschritt auflisten.", parameters: { type: "object", properties: {} } } },
 
@@ -145,6 +146,7 @@ async function runTool(name, args, ctx) {
     case "add_event": { const e = Store.addEvent({ title: args.title, date: args.date, time: args.time, location: args.location }); return `Termin: "${e.title}" am ${e.date}${e.time ? " " + e.time : ""}.`; }
     case "add_goal": { const g = Store.addGoal({ title: args.title, target: args.target }); return `Ziel angelegt: "${g.title}".`; }
     case "remove_task": { const t = Store.removeTask(args.id || args.title); return t ? `Geloescht: "${t.title}".` : "Keine passende Aufgabe gefunden."; }
+    case "add_subtask": { const t = Store.findTask(args.task); if (!t) return "Keine passende Aufgabe gefunden."; Store.updateTask(t.id, { subtasks: (t.subtasks || []).concat([{ title: args.title }]) }); return `Unteraufgabe zu "${t.title}" hinzugefuegt: "${args.title}".`; }
     case "list_events": { const l = Store.upcomingEvents(10); return l.length ? l.map((e) => `- ${e.title}: ${e.date}${e.time ? " " + e.time : ""}${e.location ? " @ " + e.location : ""}`).join("\n") : "Keine kommenden Termine."; }
     case "list_goals": { const l = Store.get().goals || []; return l.length ? l.map((g) => `- ${g.title}: ${g.progress || 0}/${g.target || 100}`).join("\n") : "Keine Ziele."; }
 

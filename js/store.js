@@ -147,6 +147,7 @@ window.Store = (function () {
   // ============================================================
   // Aufgaben (todo + homework, mit Wiederholung)
   // ============================================================
+  function subList(arr) { return Array.isArray(arr) ? arr.map((x) => x && { id: x.id || U.uid(), title: String(x.title != null ? x.title : "").trim(), done: !!x.done }).filter((x) => x && x.title) : []; }
   function addTask(t) {
     const task = {
       id: U.uid(),
@@ -158,11 +159,13 @@ window.Store = (function () {
       repeat: t.repeat && ["daily", "weekly"].includes(t.repeat.freq) ? { freq: t.repeat.freq } : null,
       done: false, doneAt: null,
       notes: t.notes ? String(t.notes) : null,
+      subtasks: subList(t.subtasks),
       createdAt: Date.now(), updatedAt: Date.now(),
     };
     patch((s) => s.tasks.push(task));
     return task;
   }
+  function toggleSubtask(ref, subId) { const t = findTask(ref); if (!t || !Array.isArray(t.subtasks)) return null; patch(() => { const sd = t.subtasks.find((x) => x.id === subId); if (sd) { sd.done = !sd.done; t.updatedAt = Date.now(); } }); return t; }
   function findTask(ref) {
     if (!ref) return null;
     const byId = state.tasks.find((x) => x.id === ref);
@@ -197,6 +200,7 @@ window.Store = (function () {
       if (c.type) t.type = c.type === "homework" ? "homework" : "todo";
       if (c.notes !== undefined) t.notes = c.notes || null;
       if (c.repeat !== undefined) t.repeat = c.repeat && ["daily", "weekly"].includes(c.repeat.freq) ? { freq: c.repeat.freq } : null;
+      if (c.subtasks !== undefined) t.subtasks = subList(c.subtasks);
       if (c.done !== undefined) { t.done = !!c.done; t.doneAt = c.done ? Date.now() : null; }
       t.updatedAt = Date.now();
     });
@@ -443,7 +447,7 @@ window.Store = (function () {
   return {
     init, get: () => state, patch, subscribe, snapshot,
     // tasks
-    addTask, findTask, completeTask, updateTask, removeTask, archiveOld, rollRecurring, nextDue,
+    addTask, findTask, completeTask, updateTask, removeTask, archiveOld, rollRecurring, nextDue, toggleSubtask,
     // reminders
     addReminder, removeReminder, markReminderFired,
     // timetable
