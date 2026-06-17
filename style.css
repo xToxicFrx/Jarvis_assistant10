@@ -52,6 +52,9 @@ body::before {
 .btn:active { transform: translateY(1px); }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .btn-primary:hover { filter: brightness(1.06); background: var(--accent); }
+.btn-primary::before { content: ""; position: absolute; top: 0; left: -60%; width: 45%; height: 100%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.4), transparent); transform: skewX(-18deg); opacity: 0; pointer-events: none; }
+@media (hover: hover) { .btn-primary:hover::before { animation: btnShine .7s ease; } }
+@keyframes btnShine { 0% { left: -60%; opacity: 0; } 25% { opacity: 1; } 100% { left: 130%; opacity: 0; } }
 .btn-ghost { background: transparent; }
 .btn-danger { color: var(--danger); border-color: transparent; background: transparent; }
 .btn-danger:hover { background: var(--danger-weak); }
@@ -149,6 +152,26 @@ body::before {
 .row-actions .icon-btn { width: 30px; height: 30px; min-width: 30px; } .row-actions .icon { width: 15px; height: 15px; color: var(--muted); }
 .subject-group { margin-top: 10px; } .subject-group:first-child { margin-top: 0; }
 .subject-head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+/* Unteraufgaben (Checkliste) */
+.sub-prog { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; padding: 2px 0; background: none; border: none; cursor: pointer; font: inherit; color: var(--muted); }
+.sub-bar { width: 90px; height: 6px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.sub-fill { height: 100%; background: var(--accent); border-radius: 6px; transition: width .3s ease; }
+.sub-count { font-size: 12px; font-variant-numeric: tabular-nums; }
+.sub-list { margin: 6px 0 2px; display: flex; flex-direction: column; gap: 2px; animation: subOpen .2s ease; }
+@keyframes subOpen { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.sub-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.sub-check { width: 18px; height: 18px; min-width: 18px; border-radius: 6px; border: 2px solid var(--border); background: transparent; color: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: .15s; }
+.sub-check:hover { border-color: var(--accent); }
+.sub-check.on { background: var(--success); border-color: var(--success); color: #fff; }
+.sub-check .icon { width: 12px; height: 12px; stroke-width: 3; }
+.sub-text { font-size: 13.5px; }
+.sub-item.done .sub-text { text-decoration: line-through; color: var(--muted); }
+/* Subtask-Editor im Dialog */
+.sub-edit { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.sub-edit-row { display: flex; gap: 6px; align-items: center; }
+.sub-edit-row input { flex: 1; padding: 8px 10px; font: inherit; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); outline: none; }
+.sub-edit-row input:focus { border-color: var(--accent); background: var(--surface); }
+.sub-edit-row .icon-btn { width: 32px; height: 32px; min-width: 32px; }
 
 /* Tests */
 .exam { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); } .exam:first-child { border-top: none; }

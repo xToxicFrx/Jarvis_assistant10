@@ -56,6 +56,12 @@ ok(Store.get().tasks.some((t) => t.type === "homework"), "Hausaufgabe via Werkze
 const rt = Store.addTask({ title: "Mappe", due: ymd, repeat: { freq: "daily" } });
 Store.completeTask(rt.id);
 ok(Utils.daysUntil(Store.get().tasks.find((t) => t.id === rt.id).due) === 1, "Wiederkehrende Aufgabe rollt weiter");
+const st = Store.addTask({ title: "Projekt", subtasks: [{ title: "Recherche" }, { title: "Schreiben" }, { title: "" }] });
+ok(st.subtasks.length === 2, "Subtasks angelegt (leere verworfen)");
+Store.toggleSubtask(st.id, st.subtasks[0].id);
+ok(Store.get().tasks.find((t) => t.id === st.id).subtasks[0].done === true, "Subtask abgehakt");
+await runTool("add_subtask", { task: "Projekt", title: "Abgabe" }, {});
+ok(Store.get().tasks.find((t) => t.id === st.id).subtasks.length === 3, "Subtask via Werkzeug hinzugefuegt");
 Store.addExam({ subject: "Bio", date: Utils.ymd(Utils.addDays(new Date(), 3)) });
 ok(Store.upcomingExams().length === 1, "Test mit Countdown");
 const h = Store.addHabit("Sport"); Store.toggleHabitToday(h.id);

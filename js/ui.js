@@ -12,6 +12,7 @@ window.UI = (function () {
   let pomoTotalMs = 0;
   const expanded = { doneTasks: false, fullWeek: false };
   const taskFilter = { mode: "all" };
+  const expandedTasks = new Set();
 
   // ---------- gemeinsame Bausteine ----------
   function cardShell(title, iconName, extraClass) {
@@ -35,7 +36,17 @@ window.UI = (function () {
     if (t.repeat) meta.appendChild(chip(t.repeat.freq === "weekly" ? "woechentlich" : "taeglich", "repeat"));
     if (!opts.hideSubject && t.subject) meta.appendChild(chip(t.subject, "subject"));
     const actions = el("div", { class: "row-actions" }, [iconBtn("i-edit", "Bearbeiten", () => openTaskModal(t.type, t)), iconBtn("i-trash", "Loeschen", () => { Store.removeTask(t.id); toast("Geloescht"); })]);
-    return el("div", { class: "task" + (t.done ? " done" : "") }, [check, el("div", { class: "task-main" }, [el("div", { class: "task-title", text: t.title }), meta]), actions]);
+    const mainKids = [el("div", { class: "task-title", text: t.title }), meta];
+    const subs = t.subtasks || [];
+    if (subs.length) {
+      const doneN = subs.filter((x) => x.done).length, open = expandedTasks.has(t.id);
+      const fill = el("div", { class: "sub-fill" });
+      const prog = el("button", { class: "sub-prog", type: "button", title: "Unteraufgaben anzeigen", onclick: () => { open ? expandedTasks.delete(t.id) : expandedTasks.add(t.id); render(Store.get()); } }, [el("div", { class: "sub-bar" }, fill), el("span", { class: "sub-count", text: doneN + "/" + subs.length })]);
+      fill.style.width = Math.round(doneN / subs.length * 100) + "%";
+      mainKids.push(prog);
+      if (open) mainKids.push(el("div", { class: "sub-list" }, subs.map((st) => el("div", { class: "sub-item" + (st.done ? " done" : "") }, [el("button", { class: "sub-check" + (st.done ? " on" : ""), type: "button", title: st.done ? "Offen" : "Erledigt", onclick: () => Store.toggleSubtask(t.id, st.id) }, st.done ? icon("i-check") : null), el("span", { class: "sub-text", text: st.title })]))));
+    }
+    return el("div", { class: "task" + (t.done ? " done" : "") }, [check, el("div", { class: "task-main" }, mainKids), actions]);
   }
 
   // ============================================================
@@ -378,14 +389,20 @@ window.UI = (function () {
     const dueI = el("input", { type: "date", value: existing && existing.due ? existing.due : "" });
     const prio = seg([["low", "Niedrig"], ["med", "Mittel"], ["high", "Hoch"]], existing ? existing.priority : "med");
     const rep = seg(CONST.REPEAT_OPTIONS.map((r) => [r.id, r.label]), existing && existing.repeat ? existing.repeat.freq : "none");
+    const subWrap = el("div", { class: "sub-edit" });
+    const subRow = (st) => { const inp = el("input", { type: "text", value: st.title || "", placeholder: "Unteraufgabe" }); const row = el("div", { class: "sub-edit-row" }, [inp, iconBtn("i-x", "Entfernen", () => row.remove())]); row._get = () => ({ id: st.id, title: inp.value.trim(), done: !!st.done }); inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }); return row; };
+    const addSub = () => { const r = subRow({}); subWrap.appendChild(r); const i = r.querySelector("input"); if (i) i.focus(); };
+    ((existing && existing.subtasks) || []).forEach((st) => subWrap.appendChild(subRow(st)));
+    const addSubBtn = el("button", { class: "btn btn-sm btn-ghost", type: "button", onclick: addSub }, [icon("i-plus"), document.createTextNode("Unteraufgabe")]);
     const save = () => {
       const title = titleI.value.trim(); if (!title) { titleI.focus(); return; }
-      const data = { title, type, subject: subjI.value.trim() || null, due: dueI.value || null, priority: prio.get(), repeat: rep.get() !== "none" ? { freq: rep.get() } : null };
+      const subtasks = Array.from(subWrap.children).map((r) => r._get && r._get()).filter((x) => x && x.title);
+      const data = { title, type, subject: subjI.value.trim() || null, due: dueI.value || null, priority: prio.get(), repeat: rep.get() !== "none" ? { freq: rep.get() } : null, subtasks };
       if (existing) Store.updateTask(existing.id, data); else Store.addTask(data);
       closeModal(); toast(existing ? "Gespeichert" : "Hinzugefuegt", "success");
     };
     titleI.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
-    openModal(existing ? "Bearbeiten" : (isHw ? "Neue Hausaufgabe" : "Neue Aufgabe"), el("div", { class: "modal-body" }, [subjectDatalist(), field("Titel", titleI), field(isHw ? "Fach" : "Fach (optional)", subjI), el("div", { class: "field-row" }, [field("Faellig bis", dueI), field("Prioritaet", prio.box)]), field("Wiederholen", rep.box), actions(existing ? "Speichern" : "Hinzufuegen", save)]));
+    openModal(existing ? "Bearbeiten" : (isHw ? "Neue Hausaufgabe" : "Neue Aufgabe"), el("div", { class: "modal-body" }, [subjectDatalist(), field("Titel", titleI), field(isHw ? "Fach" : "Fach (optional)", subjI), el("div", { class: "field-row" }, [field("Faellig bis", dueI), field("Prioritaet", prio.box)]), field("Wiederholen", rep.box), field("Unteraufgaben", el("div", {}, [subWrap, addSubBtn])), actions(existing ? "Speichern" : "Hinzufuegen", save)]));
   }
   function editTask(t) { openTaskModal(t.type, t); }
 
@@ -418,6 +435,8 @@ window.UI = (function () {
   function openGradeListModal(subject) {
     const list = Store.get().grades.filter((g) => g.subject === subject);
     const body = el("div", { class: "modal-body" }, [el("div", { class: "muted mb", text: "Schnitt: " + Store.subjectAverage(subject) })]);
+    const dated = list.filter((g) => g.date).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    if (dated.length >= 2 && Charts.lineChart) { const sp = Charts.lineChart(dated.map((g) => g.value)); if (sp) { body.appendChild(el("div", { class: "stat-title muted", text: "Verlauf (oben = besser)" })); body.appendChild(sp); } }
     list.forEach((g) => body.appendChild(el("div", { class: "grade-item" }, [el("span", { class: "grade-val", text: String(g.value) }), el("span", { class: "muted", text: (g.label || "") + (g.weight !== 1 ? ` ·×${g.weight}` : "") + " · " + g.date }), iconBtn("i-trash", "Loeschen", () => { Store.removeGrade(g.id); closeModal(); toast("Geloescht"); })])));
     body.appendChild(el("div", { class: "modal-actions" }, el("button", { class: "btn btn-block", type: "button", text: "Schliessen", onclick: closeModal })));
     openModal("Noten: " + subject, body);
