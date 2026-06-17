@@ -69,11 +69,31 @@ window.UI = (function () {
     const todayKey = U.weekdayKey(new Date());
     const lessons = (s.timetable[todayKey] || []).length;
     const avg = Store.overallAverage();
+    // Tagesfortschritt-Ring: heute erledigt vs. (heute erledigt + offen faellig/ueberfaellig)
+    const today = U.todayYMD();
+    const doneToday = s.tasks.filter((t) => t.done && t.doneAt && U.ymd(new Date(t.doneAt)) === today).length;
+    const actionable = open.filter((t) => { const n = U.daysUntil(t.due); return n !== null && n <= 0; }).length;
+    const total = doneToday + actionable, pct = total ? doneToday / total : 1;
+    body.appendChild(el("div", { class: "ov-progress" }, [
+      el("div", { class: "ring-wrap" }, [Charts.ring(pct), el("div", { class: "ring-pct", text: Math.round(pct * 100) + "%" })]),
+      el("div", {}, [el("div", { class: "ov-prog-title", text: "Tagesfortschritt" }), el("div", { class: "muted small", text: total ? `${doneToday} von ${total} erledigt` : "Nichts faellig fuer heute" })]),
+    ]));
     const stats = [
       ["heute faellig", dueToday], ["ueberfaellig", overdue], ["offen", open.length],
       ["Stunden heute", lessons], ["Fokus heute", Store.focusToday() + "m"], ["Schnitt", avg != null ? avg : "–"],
     ];
     body.appendChild(el("div", { class: "ov-stats" }, stats.map(([lab, val]) => el("div", { class: "ov-stat" }, [el("b", { text: String(val) }), el("span", { text: lab })]))));
+
+    // Proaktive Tipps (lokal, ohne KI)
+    const tips = [];
+    if (overdue > 0) tips.push(["i-bell", `${overdue} ueberfaellige Aufgabe${overdue > 1 ? "n" : ""} – zuerst erledigen?`]);
+    const nextExam = Store.upcomingExams(1)[0];
+    if (nextExam) { const d = U.daysUntil(nextExam.date); if (d != null && d >= 0 && d <= 3) tips.push(["i-clipboard", `Test ${nextExam.subject} ${Store.dueLabel(nextExam.date)} – schon gelernt?`]); }
+    const vDue = Store.vocabDue().length;
+    if (vDue) tips.push(["i-book", `${vDue} Vokabel${vDue > 1 ? "n" : ""} faellig – kurz wiederholen?`]);
+    const openHabit = s.habits.find((h) => !Store.isHabitDoneToday(h.id));
+    if (openHabit) tips.push(["i-flame", `Gewohnheit „${openHabit.name}" heute noch offen.`]);
+    if (tips.length) body.appendChild(el("div", { class: "ov-tips" }, tips.slice(0, 3).map(([ic, tx]) => el("div", { class: "ov-tip" }, [icon(ic), el("span", { text: tx })]))));
 
     const qa = el("div", { class: "ov-actions" }, [
       el("button", { class: "btn btn-sm", type: "button", onclick: () => openTaskModal("todo") }, [icon("i-plus"), document.createTextNode("Aufgabe")]),
@@ -526,12 +546,15 @@ window.UI = (function () {
       if (i >= due.length) { bodyEl.appendChild(el("div", { class: "quiz-done" }, [el("p", { text: `Fertig! ${correct} von ${due.length} gewusst.` }), el("button", { class: "btn btn-primary btn-block", type: "button", text: "Schliessen", onclick: closeModal })])); return; }
       const c = due[i];
       bodyEl.appendChild(el("div", { class: "quiz-count muted", text: `${i + 1} / ${due.length}` }));
-      bodyEl.appendChild(el("div", { class: "quiz-front", text: c.front }));
-      const back = el("div", { class: "quiz-back hidden", text: c.back });
-      bodyEl.appendChild(back);
+      const flipCard = el("div", { class: "flip", title: "Zum Umdrehen tippen" }, el("div", { class: "flip-inner" }, [
+        el("div", { class: "flip-face flip-front" }, el("span", { text: c.front })),
+        el("div", { class: "flip-face flip-back" }, el("span", { text: c.back })),
+      ]));
       const judge = el("div", { class: "quiz-judge hidden" }, [el("button", { class: "btn", type: "button", text: "Nochmal", onclick: () => { Store.reviewVocab(c.id, false); i++; draw(); } }), el("button", { class: "btn btn-primary", type: "button", text: "Gewusst", onclick: () => { Store.reviewVocab(c.id, true); correct++; i++; draw(); } })]);
-      const reveal = el("button", { class: "btn btn-block", type: "button", text: "Antwort zeigen", onclick: () => { back.classList.remove("hidden"); reveal.classList.add("hidden"); judge.classList.remove("hidden"); } });
-      bodyEl.appendChild(reveal); bodyEl.appendChild(judge);
+      const reveal = el("button", { class: "btn btn-block", type: "button", text: "Antwort zeigen (Karte drehen)", onclick: flip });
+      function flip() { if (flipCard.classList.contains("flipped")) return; flipCard.classList.add("flipped"); reveal.classList.add("hidden"); judge.classList.remove("hidden"); }
+      flipCard.addEventListener("click", flip);
+      bodyEl.appendChild(flipCard); bodyEl.appendChild(reveal); bodyEl.appendChild(judge);
     }
     draw();
     openModal("Vokabeln lernen", bodyEl);
