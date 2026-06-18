@@ -183,13 +183,49 @@ window.UI = (function () {
     const list = Store.upcomingExams(20);
     head.appendChild(pill(list.length)); head.appendChild(iconBtn("i-plus", "Test hinzufuegen", openExamModal));
     card.appendChild(body);
+    // Heute lernen (Lernblöcke aller Tests, die heute anstehen)
+    const todays = Store.todaysStudyBlocks();
+    if (todays.length) {
+      const box = el("div", { class: "study-today" }, [el("div", { class: "study-today-head" }, [icon("i-spark"), document.createTextNode("Heute lernen")])]);
+      todays.forEach(({ exam, block }) => box.appendChild(el("div", { class: "study-block" }, [
+        el("button", { class: "sub-check", type: "button", title: "Erledigt", onclick: () => Store.toggleStudyBlock(exam.id, block.id) }),
+        el("div", { class: "study-block-main" }, [el("span", { class: "study-block-subj", text: exam.subject }), el("span", { class: "muted small", text: block.minutes + " min · " + Store.dueLabel(exam.date) })]),
+        el("button", { class: "btn btn-sm btn-primary", type: "button", onclick: () => { Store.pomodoroStart({ workMin: block.minutes }); toast("Lern-Timer gestartet", "success"); } }, [icon("i-play"), document.createTextNode("Lernen")]),
+      ])));
+      body.appendChild(box);
+    }
     if (!list.length) { body.appendChild(empty("Keine Tests eingetragen.")); return card; }
     list.forEach((e) => {
       const n = U.daysUntil(e.date);
       const cd = el("span", { class: "exam-countdown" + (n <= 2 ? " soon" : ""), text: n <= 0 ? "heute" : n + " T" });
-      body.appendChild(el("div", { class: "exam" }, [cd, el("div", { class: "exam-main" }, [el("div", { class: "exam-title", text: e.subject + (e.title ? " — " + e.title : "") }), el("div", { class: "exam-when muted", text: U.fmtDateShort(U.parseYMD(e.date)) })]), iconBtn("i-trash", "Loeschen", () => { Store.removeExam(e.id); toast("Geloescht"); })]));
+      const main = el("div", { class: "exam-main" }, [el("div", { class: "exam-title", text: e.subject + (e.title ? " — " + e.title : "") }), el("div", { class: "exam-when muted", text: U.fmtDateShort(U.parseYMD(e.date)) })]);
+      const prog = Store.studyPlanProgress(e.id);
+      if (prog.total) {
+        const fill = el("div", { class: "goal-fill" });
+        fill.style.width = Math.round(prog.pct * 100) + "%";
+        main.appendChild(el("button", { class: "study-prog", type: "button", title: "Lernplan anpassen", onclick: () => openStudyPlanModal(e) }, [el("div", { class: "goal-bar" }, fill), el("span", { class: "muted small", text: prog.done + "/" + prog.total + " gelernt" })]));
+      } else if (n > 0) {
+        main.appendChild(el("button", { class: "study-add", type: "button", onclick: () => openStudyPlanModal(e) }, [icon("i-spark"), document.createTextNode("Lernplan erstellen")]));
+      }
+      body.appendChild(el("div", { class: "exam" }, [cd, main, iconBtn("i-trash", "Loeschen", () => { Store.removeExam(e.id); toast("Geloescht"); })]));
     });
     return card;
+  }
+  function openStudyPlanModal(exam) {
+    const cfg = exam.plan && exam.plan.config;
+    const countI = el("input", { type: "number", min: "1", max: "20", value: String(cfg ? cfg.count : 3) });
+    const minI = el("input", { type: "number", min: "5", max: "180", step: "5", value: String(cfg ? cfg.minutes : 30) });
+    const rising = seg([["0", "Gleich"], ["1", "Steigend"]], cfg && cfg.rising ? "1" : "0");
+    const preview = el("div", { class: "field-hint" });
+    const upd = () => { const d = U.daysUntil(exam.date); preview.textContent = d > 0 ? `${countI.value} Bloecke à ${minI.value} min, verteilt bis zum Test (in ${d} Tagen).` : "Test ist heute oder vorbei — kein Lernplan moeglich."; };
+    [countI, minI].forEach((i) => i.addEventListener("input", upd)); upd();
+    const save = () => { const p = Store.generateStudyPlan(exam.id, { count: Number(countI.value), minutes: Number(minI.value), rising: rising.get() === "1" }); closeModal(); toast(p ? "Lernplan erstellt" : "Kein Lernplan moeglich", p ? "success" : "error"); };
+    openModal("Lernplan: " + exam.subject, el("div", { class: "modal-body" }, [
+      el("div", { class: "muted mb", text: (exam.title ? exam.title + " · " : "") + Store.dueLabel(exam.date) }),
+      el("div", { class: "field-row" }, [field("Lernbloecke", countI), field("Minuten/Block", minI)]),
+      field("Intensitaet", rising.box), preview,
+      el("div", { class: "modal-actions" }, [exam.plan ? el("button", { class: "btn btn-danger", type: "button", text: "Plan loeschen", onclick: () => { Store.clearStudyPlan(exam.id); closeModal(); toast("Plan geloescht"); } }) : null, el("button", { class: "btn btn-primary", type: "button", text: exam.plan ? "Neu erstellen" : "Erstellen", onclick: save })].filter(Boolean)),
+    ]));
   }
 
   function ttLessonRow(k, e) {

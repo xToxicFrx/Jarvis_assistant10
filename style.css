@@ -192,6 +192,15 @@ body::before {
 .exam-countdown { min-width: 46px; text-align: center; font-weight: 700; font-size: 13px; color: var(--accent); background: var(--accent-weak); border-radius: 8px; padding: 4px 2px; }
 .exam-countdown.soon { color: var(--danger); background: var(--danger-weak); }
 .exam-main { flex: 1; min-width: 0; } .exam-title { font-size: 14px; } .exam-when { font-size: 12px; }
+/* Klausur-Lerncoach */
+.study-today { background: var(--accent-weak); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px; }
+.study-today-head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; margin-bottom: 6px; } .study-today-head .icon { width: 16px; height: 16px; color: var(--accent); }
+.study-block { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.study-block-main { flex: 1; min-width: 0; } .study-block-subj { display: block; font-size: 14px; font-weight: 600; }
+.study-block .sub-check { flex: none; }
+.study-prog { display: flex; align-items: center; gap: 8px; margin-top: 6px; width: 100%; background: none; border: none; padding: 0; cursor: pointer; font: inherit; }
+.study-prog .goal-bar { flex: 1; margin: 0; } .study-prog .muted { white-space: nowrap; }
+.study-add { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; background: none; border: none; padding: 0; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; } .study-add .icon { width: 15px; height: 15px; }
 
 /* Stundenplan */
 .tt-day { border-top: 1px solid var(--border); padding: 8px 0; } .tt-day:first-child { border-top: none; }
