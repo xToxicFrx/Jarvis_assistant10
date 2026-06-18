@@ -242,6 +242,36 @@ window.Store = (function () {
     return { dayKey: dk, entry };
   }
   function removeTimetableEntry(dk, id) { patch((s) => { if (s.timetable[dk]) s.timetable[dk] = s.timetable[dk].filter((x) => x.id !== id); }); }
+  // Naechstes Vorkommen eines Fachs im Stundenplan ab heute (bis 14 Tage). Heute nur, wenn die Stunde noch nicht begonnen hat.
+  function nextLessonOf(subject, fromDate) {
+    if (!subject) return null;
+    const q = String(subject).trim().toLowerCase(); if (!q) return null;
+    const base = fromDate ? new Date(fromDate) : new Date();
+    const nowClock = U.fmtClock(base);
+    for (let i = 0; i < 14; i++) {
+      const d = U.addDays(base, i), dk = U.weekdayKey(d);
+      const list = state.timetable[dk] || [];
+      for (const e of list) {
+        if (!e.subject || !e.subject.toLowerCase().includes(q)) continue;
+        if (i === 0 && e.start && e.start <= nowClock) continue; // heute schon vorbei
+        return { dayKey: dk, date: U.ymd(d), entry: e };
+      }
+    }
+    return null;
+  }
+  // Heutige naechste (laufende/kommende) Stunde anhand der Uhrzeit.
+  function nextLessonNow() {
+    const now = new Date(), dk = U.weekdayKey(now), nowClock = U.fmtClock(now);
+    const list = (state.timetable[dk] || []).filter((e) => e.start);
+    for (const e of list) {
+      if ((e.end || e.start) > nowClock) {
+        const [h, m] = e.start.split(":").map(Number);
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        return { dayKey: dk, entry: e, startsInMin: Math.max(0, (h * 60 + m) - nowMin) };
+      }
+    }
+    return null;
+  }
 
   // ============================================================
   // Noten
@@ -451,7 +481,7 @@ window.Store = (function () {
     // reminders
     addReminder, removeReminder, markReminderFired,
     // timetable
-    dayKey, setTimetableEntry, removeTimetableEntry,
+    dayKey, setTimetableEntry, removeTimetableEntry, nextLessonOf, nextLessonNow,
     // grades
     addGrade, removeGrade, subjectAverage, subjectAverages, gradeSubjects, overallAverage, neededGrade, projectedAverage,
     // exams
