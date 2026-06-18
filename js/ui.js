@@ -191,21 +191,56 @@ window.UI = (function () {
     return card;
   }
 
+  function ttLessonRow(k, e) {
+    return el("div", { class: "tt-lesson" }, [el("span", { class: "period", text: e.period ? e.period + "." : "" }), el("span", { class: "subj", text: e.subject }), e.room ? el("span", { class: "room", text: e.room }) : null, e.start ? el("span", { class: "time", text: e.start + (e.end ? "-" + e.end : "") }) : null, iconBtn("i-trash", "Loeschen", () => { Store.removeTimetableEntry(k, e.id); toast("Geloescht"); })]);
+  }
+  function buildTimetableGrid(s, todayKey) {
+    const days = CONST.WEEKDAYS.slice(0, 5); // Mo–Fr
+    const periodsSet = new Set(); let hasNoPeriod = false;
+    days.forEach((k) => (s.timetable[k] || []).forEach((e) => { if (e.period != null) periodsSet.add(e.period); else hasNoPeriod = true; }));
+    const periods = [...periodsSet].sort((a, b) => a - b);
+    const grid = el("div", { class: "tt-grid" });
+    grid.appendChild(el("div", { class: "tt-grid-head tt-period-label" }));
+    days.forEach((k) => grid.appendChild(el("div", { class: "tt-grid-head" + (k === todayKey ? " is-today" : ""), text: CONST.WEEKDAY_SHORT[k] })));
+    const rowFor = (label, period, pred) => {
+      grid.appendChild(el("div", { class: "tt-period-label", text: label }));
+      days.forEach((k) => {
+        const entries = (s.timetable[k] || []).filter(pred);
+        const cell = el("div", { class: "tt-cell" + (entries.length ? " has" : " empty") + (k === todayKey ? " is-today" : "") },
+          entries.map((e) => el("div", { class: "tt-cell-lesson", title: "Loeschen", onclick: (ev) => { ev.stopPropagation(); Store.removeTimetableEntry(k, e.id); toast("Geloescht"); } }, [el("span", { class: "tt-cell-subj", text: e.subject }), e.room ? el("span", { class: "tt-cell-room", text: e.room }) : null])));
+        cell.addEventListener("click", () => openTimetableModal({ day: k, period: period }));
+        grid.appendChild(cell);
+      });
+    };
+    periods.forEach((p) => rowFor(p + ".", p, (e) => e.period === p));
+    if (hasNoPeriod) rowFor("—", null, (e) => e.period == null);
+    return grid;
+  }
   function buildTimetable(s) {
     const { card, head, body } = cardShell("Stundenplan", "i-calendar");
-    head.appendChild(iconBtn("i-plus", "Stunde hinzufuegen", openTimetableModal));
-    card.appendChild(body);
     const todayKey = U.weekdayKey(new Date());
+    const view = expanded.ttView || "day";
+    head.appendChild(el("div", { class: "mini-filter tt-toggle" }, [["day", "Heute"], ["week", "Woche"]].map(([k, lab]) => el("button", { type: "button", class: "mini-chip" + (view === k ? " on" : ""), onclick: () => { expanded.ttView = k; render(Store.get()); } }, lab))));
+    head.appendChild(iconBtn("i-plus", "Stunde hinzufuegen", () => openTimetableModal()));
+    card.appendChild(body);
     const hasAny = CONST.WEEKDAYS.some((k) => (s.timetable[k] || []).length);
     if (!hasAny) { body.appendChild(empty("Noch kein Stundenplan.")); return card; }
-    const showFull = expanded.fullWeek || !(s.timetable[todayKey] || []).length;
-    const days = showFull ? CONST.WEEKDAYS.filter((k) => (s.timetable[k] || []).length) : [todayKey];
-    days.forEach((k) => {
-      const dayEl = el("div", { class: "tt-day" + (k === todayKey ? " is-today" : "") }, el("div", { class: "tt-day-name", text: CONST.WEEKDAY_LABELS[k] + (k === todayKey ? " (heute)" : "") }));
-      (s.timetable[k] || []).forEach((e) => dayEl.appendChild(el("div", { class: "tt-lesson" }, [el("span", { class: "period", text: e.period ? e.period + "." : "" }), el("span", { class: "subj", text: e.subject }), e.room ? el("span", { class: "room", text: e.room }) : null, e.start ? el("span", { class: "time", text: e.start + (e.end ? "-" + e.end : "") }) : null, iconBtn("i-trash", "Loeschen", () => { Store.removeTimetableEntry(k, e.id); toast("Geloescht"); })])));
-      body.appendChild(dayEl);
-    });
-    body.appendChild(el("button", { class: "toggle-link", type: "button", onclick: () => { expanded.fullWeek = !expanded.fullWeek; render(Store.get()); } }, expanded.fullWeek ? "Nur heute" : "Ganze Woche"));
+    if (view === "week") { body.appendChild(buildTimetableGrid(s, todayKey)); return card; }
+    // Tagesansicht
+    const nl = Store.nextLessonNow();
+    if (nl) {
+      const e = nl.entry, when = nl.startsInMin <= 0 ? "laeuft gerade" : "in " + nl.startsInMin + " min";
+      const parts = [icon("i-clock"), el("b", { text: e.subject })];
+      if (e.start) parts.push(document.createTextNode(" " + e.start));
+      if (e.room) parts.push(document.createTextNode(" · " + e.room));
+      parts.push(document.createTextNode(" — " + when));
+      body.appendChild(el("div", { class: "tt-next" }, parts));
+    }
+    let dayK = todayKey;
+    if (!(s.timetable[dayK] || []).length) { for (let i = 1; i <= 7; i++) { const k = U.weekdayKey(U.addDays(new Date(), i)); if ((s.timetable[k] || []).length) { dayK = k; break; } } }
+    const dayEl = el("div", { class: "tt-day is-today" }, el("div", { class: "tt-day-name", text: CONST.WEEKDAY_LABELS[dayK] + (dayK === todayKey ? " (heute)" : "") }));
+    (s.timetable[dayK] || []).forEach((e) => dayEl.appendChild(ttLessonRow(dayK, e)));
+    body.appendChild(dayEl);
     return card;
   }
 
@@ -434,11 +469,12 @@ window.UI = (function () {
     openModal("Neue Erinnerung", el("div", { class: "modal-body" }, [field("Text", textI), field("Wann", dtI), actions("Setzen", save)]));
   }
 
-  function openTimetableModal() {
+  function openTimetableModal(prefill) {
+    prefill = prefill || {};
     const daySel = el("select", {}, CONST.WEEKDAYS.map((k) => el("option", { value: k }, CONST.WEEKDAY_LABELS[k])));
-    const tk = U.weekdayKey(new Date()); daySel.value = (tk === "sat" || tk === "sun") ? "mon" : tk;
+    const tk = U.weekdayKey(new Date()); daySel.value = prefill.day || ((tk === "sat" || tk === "sun") ? "mon" : tk);
     const subjI = el("input", { type: "text", list: "subjectList", placeholder: "Fach" });
-    const periodI = el("input", { type: "number", min: "1", max: "12", placeholder: "1" });
+    const periodI = el("input", { type: "number", min: "1", max: "12", placeholder: "1", value: prefill.period != null ? String(prefill.period) : "" });
     const startI = el("input", { type: "time" }), endI = el("input", { type: "time" }), roomI = el("input", { type: "text", placeholder: "Raum" });
     const save = () => { const subject = subjI.value.trim(); if (!subject) { subjI.focus(); return; } Store.setTimetableEntry({ day: daySel.value, subject, period: periodI.value, start: startI.value, end: endI.value, room: roomI.value }); closeModal(); toast("Eingetragen", "success"); };
     openModal("Schulstunde", el("div", { class: "modal-body" }, [subjectDatalist(), el("div", { class: "field-row" }, [field("Tag", daySel), field("Stunde", periodI)]), field("Fach", subjI), el("div", { class: "field-row" }, [field("Von", startI), field("Bis", endI)]), field("Raum", roomI), actions("Eintragen", save)]));

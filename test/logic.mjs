@@ -62,6 +62,12 @@ Store.toggleSubtask(st.id, st.subtasks[0].id);
 ok(Store.get().tasks.find((t) => t.id === st.id).subtasks[0].done === true, "Subtask abgehakt");
 await runTool("add_subtask", { task: "Projekt", title: "Abgabe" }, {});
 ok(Store.get().tasks.find((t) => t.id === st.id).subtasks.length === 3, "Subtask via Werkzeug hinzugefuegt");
+// Stundenplan: naechste Stunde eines Fachs
+Store.setTimetableEntry({ day: "mon", subject: "Mathe", period: 1, start: "08:00", end: "08:45", room: "R1" });
+Store.setTimetableEntry({ day: "thu", subject: "Mathe", period: 2, start: "09:00", end: "09:45" });
+const nlo = Store.nextLessonOf("Mathe");
+ok(nlo && /Mathe/i.test(nlo.entry.subject) && /^\d{4}-\d{2}-\d{2}$/.test(nlo.date) && ["mon", "thu"].includes(nlo.dayKey), "nextLessonOf findet naechste Mathe-Stunde");
+ok(Store.nextLessonOf("Chemie") === null, "nextLessonOf ohne Eintrag -> null");
 Store.addExam({ subject: "Bio", date: Utils.ymd(Utils.addDays(new Date(), 3)) });
 ok(Store.upcomingExams().length === 1, "Test mit Countdown");
 const h = Store.addHabit("Sport"); Store.toggleHabitToday(h.id);
