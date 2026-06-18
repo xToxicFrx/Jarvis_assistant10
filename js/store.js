@@ -55,7 +55,7 @@ window.Store = (function () {
       updatedAt: s.updatedAt || Date.now(),
       settings: Object.assign({}, d.settings, s.settings || {}),
       tasks: arr(s.tasks), timetable: tt, reminders: arr(s.reminders),
-      grades: arr(s.grades).map((g) => Object.assign({ scale: "grade", category: null }, g)), exams: arr(s.exams), habits: arr(s.habits),
+      grades: arr(s.grades).map((g) => Object.assign({ scale: "grade", category: null }, g)), exams: arr(s.exams).map((e) => Object.assign({ plan: null }, e)), habits: arr(s.habits),
       notes: arr(s.notes), events: arr(s.events), goals: arr(s.goals),
       vocab: arr(s.vocab), budget: arr(s.budget),
       pomodoro: pom,
@@ -330,9 +330,32 @@ window.Store = (function () {
   // ============================================================
   // Tests / Klassenarbeiten
   // ============================================================
-  function addExam(e) { const ex = { id: U.uid(), subject: String(e.subject || "").trim() || "Sonstige", title: e.title ? String(e.title).trim() : null, date: e.date, note: e.note ? String(e.note).trim() : null, createdAt: Date.now() }; patch((s) => s.exams.push(ex)); return ex; }
+  function addExam(e) { const ex = { id: U.uid(), subject: String(e.subject || "").trim() || "Sonstige", title: e.title ? String(e.title).trim() : null, date: e.date, note: e.note ? String(e.note).trim() : null, plan: null, createdAt: Date.now() }; patch((s) => s.exams.push(ex)); return ex; }
   function removeExam(id) { patch((s) => { s.exams = s.exams.filter((x) => x.id !== id); }); }
   function upcomingExams(limit = 50) { return state.exams.filter((e) => U.daysUntil(e.date) !== null && U.daysUntil(e.date) >= -1).sort((a, b) => U.daysUntil(a.date) - U.daysUntil(b.date)).slice(0, limit); }
+  // ---- Klausur-Lerncoach: Lernplan aus verteilten Bloecken am Exam-Objekt ----
+  function generateStudyPlan(examId, opts) {
+    opts = opts || {};
+    const count = U.clamp(Math.round(opts.count || 3), 1, 20);
+    const minutes = U.clamp(Math.round(opts.minutes || 30), 5, 180);
+    const rising = !!opts.rising;
+    const ex = state.exams.find((x) => x.id === examId); if (!ex) return null;
+    const dleft = U.daysUntil(ex.date); if (dleft == null || dleft <= 0) return null;
+    const span = Math.max(1, dleft); // heute (0) .. Vortag (span-1)
+    const blocks = [];
+    for (let i = 0; i < count; i++) {
+      const off = Math.min(span - 1, Math.round((i * (span - 1)) / Math.max(1, count - 1)));
+      const mins = (rising && count > 1) ? Math.round(minutes * (0.7 + (0.6 * i) / (count - 1))) : minutes;
+      blocks.push({ id: U.uid(), date: U.ymd(U.addDays(new Date(), off)), minutes: mins, done: false });
+    }
+    blocks.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    patch(() => { const x = state.exams.find((y) => y.id === examId); if (x) x.plan = { blocks, createdAt: Date.now(), config: { count, minutes, rising } }; });
+    return (state.exams.find((y) => y.id === examId) || {}).plan || null;
+  }
+  function clearStudyPlan(examId) { patch(() => { const ex = state.exams.find((x) => x.id === examId); if (ex) ex.plan = null; }); }
+  function toggleStudyBlock(examId, blockId) { const ex = state.exams.find((x) => x.id === examId); if (!ex || !ex.plan) return null; patch(() => { const b = ex.plan.blocks.find((x) => x.id === blockId); if (b) b.done = !b.done; }); return ex; }
+  function todaysStudyBlocks() { const today = U.todayYMD(), out = []; state.exams.forEach((ex) => { if (ex.plan && ex.plan.blocks) ex.plan.blocks.forEach((b) => { if (b.date === today && !b.done) out.push({ exam: ex, block: b }); }); }); return out; }
+  function studyPlanProgress(examId) { const ex = state.exams.find((x) => x.id === examId); if (!ex || !ex.plan || !ex.plan.blocks.length) return { done: 0, total: 0, pct: 0 }; const total = ex.plan.blocks.length, done = ex.plan.blocks.filter((b) => b.done).length; return { done, total, pct: total ? done / total : 0 }; }
 
   // ============================================================
   // Gewohnheiten + Streaks
@@ -513,7 +536,7 @@ window.Store = (function () {
     // grades
     addGrade, removeGrade, subjectAverage, subjectAverages, gradeSubjects, overallAverage, neededGrade, projectedAverage, scaleOf, gradeScaleInfo,
     // exams
-    addExam, removeExam, upcomingExams,
+    addExam, removeExam, upcomingExams, generateStudyPlan, clearStudyPlan, toggleStudyBlock, todaysStudyBlocks, studyPlanProgress,
     // habits
     addHabit, removeHabit, toggleHabitToday, isHabitDoneToday, habitStreak,
     // notes

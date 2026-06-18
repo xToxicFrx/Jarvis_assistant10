@@ -83,6 +83,16 @@ Store.addGrade({ subject: "Sport", value: 3 });
 ok(Store.get().grades.find((g) => g.subject === "Sport").scale === "grade", "Note ohne Skala -> grade (Default)");
 Store.addExam({ subject: "Bio", date: Utils.ymd(Utils.addDays(new Date(), 3)) });
 ok(Store.upcomingExams().length === 1, "Test mit Countdown");
+// Klausur-Lerncoach (nach dem Countdown-Test, da dieser genau 1 Test erwartet)
+const exC = Store.addExam({ subject: "Geschichte", date: Utils.ymd(Utils.addDays(new Date(), 5)) });
+ok(Store.get().exams.find((x) => x.id === exC.id).plan === null, "neuer Test ohne Lernplan -> null");
+const plan = Store.generateStudyPlan(exC.id, { count: 4, minutes: 30 });
+ok(plan && plan.blocks.length === 4, "Lernplan: 4 Bloecke erstellt");
+ok(plan.blocks.every((b) => b.date >= Utils.todayYMD() && b.date < exC.date), "Lernbloecke zwischen heute und Test");
+Store.toggleStudyBlock(exC.id, plan.blocks[0].id);
+ok(Store.studyPlanProgress(exC.id).done === 1, "Lernblock abgehakt -> Fortschritt 1");
+const exPast = Store.addExam({ subject: "Alt", date: Utils.ymd(Utils.addDays(new Date(), -1)) });
+ok(Store.generateStudyPlan(exPast.id, { count: 3, minutes: 20 }) === null, "Kein Lernplan fuer vergangenen Test");
 const h = Store.addHabit("Sport"); Store.toggleHabitToday(h.id);
 ok(Store.habitStreak(h.id) === 1, "Gewohnheit Streak 1");
 Store.pomodoroStart(); const adv = Store.pomodoroAdvance();

@@ -76,6 +76,8 @@ const TOOL_SCHEMAS = [
 
   { type: "function", function: { name: "add_exam", description: "Klassenarbeit/Test mit Datum anlegen.", parameters: { type: "object", properties: { subject: { type: "string" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" } }, required: ["subject", "date"] } } },
   { type: "function", function: { name: "list_exams", description: "Kommende Tests mit Countdown.", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "create_study_plan", description: "Lernplan fuer einen kommenden Test erstellen: Lernbloecke ueber die Tage bis zum Test verteilen.", parameters: { type: "object", properties: { subject: { type: "string", description: "Fach des Tests" }, count: { type: "integer", description: "Anzahl Lernbloecke" }, minutes: { type: "integer", description: "Minuten pro Block" }, rising: { type: "boolean", description: "Naeher am Test laenger lernen" } }, required: ["subject"] } } },
+  { type: "function", function: { name: "list_study_today", description: "Heute anstehende Lernbloecke (Klausur-Lerncoach).", parameters: { type: "object", properties: {} } } },
 
   { type: "function", function: { name: "add_habit", description: "Neue taegliche Gewohnheit.", parameters: { type: "object", properties: { name: { type: "string" } }, required: ["name"] } } },
   { type: "function", function: { name: "check_habit", description: "Gewohnheit fuer heute abhaken (oder Haken entfernen).", parameters: { type: "object", properties: { name: { type: "string" } }, required: ["name"] } } },
@@ -136,6 +138,8 @@ async function runTool(name, args, ctx) {
 
     case "add_exam": { const e = Store.addExam({ subject: args.subject, title: args.title, date: args.date }); return `Test eingetragen: ${e.subject}${e.title ? " " + e.title : ""} am ${e.date} (${Store.dueLabel(e.date)}).`; }
     case "list_exams": { const l = Store.upcomingExams(10); return l.length ? l.map((e) => `- ${e.subject}${e.title ? " " + e.title : ""}: ${Store.dueLabel(e.date)}`).join("\n") : "Keine kommenden Tests."; }
+    case "create_study_plan": { const ex = Store.upcomingExams(50).find((e) => e.subject.toLowerCase().includes(String(args.subject || "").toLowerCase())); if (!ex) return "Kein kommender Test fuer dieses Fach gefunden."; const p = Store.generateStudyPlan(ex.id, { count: args.count, minutes: args.minutes, rising: args.rising }); return p ? `Lernplan fuer ${ex.subject} erstellt: ${p.blocks.length} Bloecke bis ${Store.dueLabel(ex.date)}.` : "Test ist zu nah oder vorbei — kein Lernplan moeglich."; }
+    case "list_study_today": { const t = Store.todaysStudyBlocks(); return t.length ? t.map(({ exam, block }) => `- ${exam.subject}: ${block.minutes} min`).join("\n") : "Heute keine Lernbloecke geplant."; }
 
     case "add_habit": { const h = Store.addHabit(args.name); return `Gewohnheit angelegt: "${h.name}".`; }
     case "check_habit": { const h = Store.get().habits.find((x) => x.name.toLowerCase().includes(String(args.name).toLowerCase())); if (!h) return "Keine passende Gewohnheit gefunden."; Store.toggleHabitToday(h.id); return `${h.name}: ${Store.isHabitDoneToday(h.id) ? "abgehakt" : "Haken entfernt"} (Streak ${Store.habitStreak(h.id)} Tage).`; }
