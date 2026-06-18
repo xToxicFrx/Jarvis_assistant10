@@ -149,12 +149,17 @@ window.Store = (function () {
   // ============================================================
   function subList(arr) { return Array.isArray(arr) ? arr.map((x) => x && { id: x.id || U.uid(), title: String(x.title != null ? x.title : "").trim(), done: !!x.done }).filter((x) => x && x.title) : []; }
   function addTask(t) {
+    const subject = t.subject ? String(t.subject).trim() : null;
+    const dueMode = t.dueMode === "nextLesson" ? "nextLesson" : "date";
+    let due = t.due || null;
+    if (dueMode === "nextLesson" && subject) { const nl = nextLessonOf(subject); if (nl) due = nl.date; }
     const task = {
       id: U.uid(),
       title: String(t.title || "").trim(),
       type: t.type === "homework" ? "homework" : "todo",
-      subject: t.subject ? String(t.subject).trim() : null,
-      due: t.due || null,
+      subject,
+      due,
+      dueMode,
       priority: CONST.PRIORITIES.includes(t.priority) ? t.priority : "med",
       repeat: t.repeat && ["daily", "weekly"].includes(t.repeat.freq) ? { freq: t.repeat.freq } : null,
       done: false, doneAt: null,
@@ -201,6 +206,9 @@ window.Store = (function () {
       if (c.notes !== undefined) t.notes = c.notes || null;
       if (c.repeat !== undefined) t.repeat = c.repeat && ["daily", "weekly"].includes(c.repeat.freq) ? { freq: c.repeat.freq } : null;
       if (c.subtasks !== undefined) t.subtasks = subList(c.subtasks);
+      if (c.dueMode !== undefined) t.dueMode = c.dueMode === "nextLesson" ? "nextLesson" : "date";
+      // Bei "naechste Stunde" das Faelligkeitsdatum aus dem Stundenplan ableiten.
+      if (t.dueMode === "nextLesson" && t.subject) { const nl = nextLessonOf(t.subject); if (nl) t.due = nl.date; }
       if (c.done !== undefined) { t.done = !!c.done; t.doneAt = c.done ? Date.now() : null; }
       t.updatedAt = Date.now();
     });

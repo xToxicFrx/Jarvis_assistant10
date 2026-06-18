@@ -68,6 +68,8 @@ Store.setTimetableEntry({ day: "thu", subject: "Mathe", period: 2, start: "09:00
 const nlo = Store.nextLessonOf("Mathe");
 ok(nlo && /Mathe/i.test(nlo.entry.subject) && /^\d{4}-\d{2}-\d{2}$/.test(nlo.date) && ["mon", "thu"].includes(nlo.dayKey), "nextLessonOf findet naechste Mathe-Stunde");
 ok(Store.nextLessonOf("Chemie") === null, "nextLessonOf ohne Eintrag -> null");
+const hwNL = Store.addTask({ type: "homework", subject: "Mathe", title: "AB2", dueMode: "nextLesson" });
+ok(hwNL.dueMode === "nextLesson" && hwNL.due === Store.nextLessonOf("Mathe").date, "HA an naechste Stunde gekoppelt (due aus Stundenplan)");
 Store.addExam({ subject: "Bio", date: Utils.ymd(Utils.addDays(new Date(), 3)) });
 ok(Store.upcomingExams().length === 1, "Test mit Countdown");
 const h = Store.addHabit("Sport"); Store.toggleHabitToday(h.id);

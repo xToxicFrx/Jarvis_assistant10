@@ -169,7 +169,8 @@ window.UI = (function () {
     card.appendChild(body);
     if (!hw.length) { body.appendChild(empty("Keine offenen Hausaufgaben.")); return card; }
     const groups = {}; hw.forEach((t) => { const k = t.subject || "Sonstige"; (groups[k] = groups[k] || []).push(t); });
-    Object.keys(groups).sort().forEach((subj) => {
+    const lessonDate = (subj) => { const nl = Store.nextLessonOf(subj); return nl ? nl.date : "9999"; };
+    Object.keys(groups).sort((a, b) => { const da = lessonDate(a), db = lessonDate(b); return da < db ? -1 : da > db ? 1 : a.localeCompare(b); }).forEach((subj) => {
       const g = el("div", { class: "subject-group" }, el("div", { class: "subject-head" }, [el("span", { text: subj }), pill(groups[subj].length)]));
       groups[subj].forEach((t) => g.appendChild(taskItem(t, { hideSubject: true })));
       body.appendChild(g);
@@ -449,15 +450,37 @@ window.UI = (function () {
     const addSub = () => { const r = subRow({}); subWrap.appendChild(r); const i = r.querySelector("input"); if (i) i.focus(); };
     ((existing && existing.subtasks) || []).forEach((st) => subWrap.appendChild(subRow(st)));
     const addSubBtn = el("button", { class: "btn btn-sm btn-ghost", type: "button", onclick: addSub }, [icon("i-plus"), document.createTextNode("Unteraufgabe")]);
+    // Hausaufgaben: Faelligkeit per Datum ODER "naechste Stunde dieses Fachs"
+    const dueField = field("Faellig bis", dueI);
+    const dueModeInit = existing && existing.dueMode === "nextLesson" ? "nextLesson" : "date";
+    const preview = el("div", { class: "field-hint hidden" });
+    const dueMode = isHw ? seg([["date", "Datum"], ["nextLesson", "Naechste Stunde"]], dueModeInit, () => syncDue()) : null;
+    function syncDue() {
+      const mode = dueMode ? dueMode.get() : "date";
+      if (mode === "nextLesson") {
+        dueField.classList.add("hidden"); preview.classList.remove("hidden");
+        const subj = subjI.value.trim();
+        if (!subj) { preview.textContent = "Bitte Fach angeben."; return; }
+        const nl = Store.nextLessonOf(subj); const d = nl && U.parseYMD(nl.date);
+        preview.textContent = nl ? ("→ faellig am " + (d ? U.fmtDateShort(d) : nl.date) + " (naechste " + subj + "-Stunde)") : ("Kein Stundenplan-Eintrag fuer " + subj + " — bitte Datum waehlen.");
+      } else { dueField.classList.remove("hidden"); preview.classList.add("hidden"); }
+    }
+    if (isHw) subjI.addEventListener("input", syncDue);
     const save = () => {
       const title = titleI.value.trim(); if (!title) { titleI.focus(); return; }
       const subtasks = Array.from(subWrap.children).map((r) => r._get && r._get()).filter((x) => x && x.title);
-      const data = { title, type, subject: subjI.value.trim() || null, due: dueI.value || null, priority: prio.get(), repeat: rep.get() !== "none" ? { freq: rep.get() } : null, subtasks };
+      const data = { title, type, subject: subjI.value.trim() || null, due: dueI.value || null, dueMode: isHw ? dueMode.get() : "date", priority: prio.get(), repeat: rep.get() !== "none" ? { freq: rep.get() } : null, subtasks };
       if (existing) Store.updateTask(existing.id, data); else Store.addTask(data);
       closeModal(); toast(existing ? "Gespeichert" : "Hinzugefuegt", "success");
     };
     titleI.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
-    openModal(existing ? "Bearbeiten" : (isHw ? "Neue Hausaufgabe" : "Neue Aufgabe"), el("div", { class: "modal-body" }, [subjectDatalist(), field("Titel", titleI), field(isHw ? "Fach" : "Fach (optional)", subjI), el("div", { class: "field-row" }, [field("Faellig bis", dueI), field("Prioritaet", prio.box)]), field("Wiederholen", rep.box), field("Unteraufgaben", el("div", {}, [subWrap, addSubBtn])), actions(existing ? "Speichern" : "Hinzufuegen", save)]));
+    const kids = [subjectDatalist(), field("Titel", titleI), field(isHw ? "Fach" : "Fach (optional)", subjI)];
+    if (isHw) kids.push(field("Faelligkeit", dueMode.box));
+    kids.push(el("div", { class: "field-row" }, [dueField, field("Prioritaet", prio.box)]));
+    if (isHw) kids.push(preview);
+    kids.push(field("Wiederholen", rep.box), field("Unteraufgaben", el("div", {}, [subWrap, addSubBtn])), actions(existing ? "Speichern" : "Hinzufuegen", save));
+    if (isHw) syncDue();
+    openModal(existing ? "Bearbeiten" : (isHw ? "Neue Hausaufgabe" : "Neue Aufgabe"), el("div", { class: "modal-body" }, kids));
   }
   function editTask(t) { openTaskModal(t.type, t); }
 
