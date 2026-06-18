@@ -70,6 +70,17 @@ ok(nlo && /Mathe/i.test(nlo.entry.subject) && /^\d{4}-\d{2}-\d{2}$/.test(nlo.dat
 ok(Store.nextLessonOf("Chemie") === null, "nextLessonOf ohne Eintrag -> null");
 const hwNL = Store.addTask({ type: "homework", subject: "Mathe", title: "AB2", dueMode: "nextLesson" });
 ok(hwNL.dueMode === "nextLesson" && hwNL.due === Store.nextLessonOf("Mathe").date, "HA an naechste Stunde gekoppelt (due aus Stundenplan)");
+// Noten: Oberstufen-Punkte (0-15) + Kategorie-Gewichtung + Default-Skala
+Store.addGrade({ subject: "Physik", value: 12, scale: "points" });
+Store.addGrade({ subject: "Physik", value: 9, scale: "points" });
+ok(Store.subjectAverage("Physik") === 10.5, "Punkte-Schnitt 10.5 (0-15)");
+ok(Store.scaleOf("Physik") === "points", "scaleOf erkennt Punkte-Fach");
+ok(Store.neededGrade("Physik", 13, 1) === 18, "neededGrade Punkte: 18 (nicht mehr erreichbar)");
+Store.addGrade({ subject: "Kunst", value: 2, category: "schriftlich" });
+Store.addGrade({ subject: "Kunst", value: 5, category: "muendlich" });
+ok(Store.subjectAverage("Kunst") === 3, "Kategorie-Gewichtung (schriftlich x2): Schnitt 3.0");
+Store.addGrade({ subject: "Sport", value: 3 });
+ok(Store.get().grades.find((g) => g.subject === "Sport").scale === "grade", "Note ohne Skala -> grade (Default)");
 Store.addExam({ subject: "Bio", date: Utils.ymd(Utils.addDays(new Date(), 3)) });
 ok(Store.upcomingExams().length === 1, "Test mit Countdown");
 const h = Store.addHabit("Sport"); Store.toggleHabitToday(h.id);

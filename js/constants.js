@@ -20,6 +20,17 @@ window.CONST = {
   // Deutsche Schulnoten 1 (sehr gut) bis 6 (ungenuegend). Dezimal erlaubt (z.B. 2.5).
   GRADE_MIN: 1,
   GRADE_MAX: 6,
+  // Notenskalen: "grade" (1-6, kleiner=besser) und "points" (0-15 Oberstufe, groesser=besser).
+  GRADE_SCALES: {
+    grade: { min: 1, max: 6, step: 0.25, betterIsLower: true, label: "Noten 1–6" },
+    points: { min: 0, max: 15, step: 1, betterIsLower: false, label: "Punkte 0–15" },
+  },
+  // Notenkategorien mit Standard-Gewicht (z.B. Klassenarbeit zaehlt mehr als muendlich).
+  GRADE_CATEGORIES: [
+    { id: "schriftlich", label: "Schriftlich", weight: 2 },
+    { id: "muendlich", label: "Muendlich", weight: 1 },
+    { id: "sonstige", label: "Sonstige", weight: 1 },
+  ],
 
   REPEAT_OPTIONS: [
     { id: "none", label: "Nie" },
@@ -54,6 +65,8 @@ window.CONST = {
     briefingEnabled: true,
     briefingSpeak: true,
     lastBriefing: null,     // "YYYY-MM-DD"
+    gradeScale: "grade",    // Standard-Notenmodus: grade (1-6) | points (0-15)
+    reduceAnim: false,
   },
 
   // Limits (auch serverseitig grob abgesichert)

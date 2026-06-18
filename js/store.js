@@ -55,7 +55,7 @@ window.Store = (function () {
       updatedAt: s.updatedAt || Date.now(),
       settings: Object.assign({}, d.settings, s.settings || {}),
       tasks: arr(s.tasks), timetable: tt, reminders: arr(s.reminders),
-      grades: arr(s.grades), exams: arr(s.exams), habits: arr(s.habits),
+      grades: arr(s.grades).map((g) => Object.assign({ scale: "grade", category: null }, g)), exams: arr(s.exams), habits: arr(s.habits),
       notes: arr(s.notes), events: arr(s.events), goals: arr(s.goals),
       vocab: arr(s.vocab), budget: arr(s.budget),
       pomodoro: pom,
@@ -284,9 +284,23 @@ window.Store = (function () {
   // ============================================================
   // Noten
   // ============================================================
+  // Notenskala/Kategorie-Helfer
+  function gradeScaleInfo(scale) { return CONST.GRADE_SCALES[scale] || CONST.GRADE_SCALES.grade; }
+  function catWeight(catId) { const c = (CONST.GRADE_CATEGORIES || []).find((x) => x.id === catId); return c ? (c.weight || 1) : 1; }
+  function effWeight(g) { return (g.weight || 1) * catWeight(g.category); }
+  // Anzeige-Skala eines Fachs: Mehrheit der Noten, sonst globale Einstellung.
+  function scaleOf(subject) {
+    const list = state.grades.filter((g) => g.subject === subject);
+    if (!list.length) return state.settings.gradeScale || "grade";
+    let p = 0, gr = 0; list.forEach((g) => { (g.scale === "points" ? (p++) : (gr++)); });
+    return p > gr ? "points" : "grade";
+  }
   function addGrade(g) {
-    const value = U.clamp(Number(g.value), CONST.GRADE_MIN, CONST.GRADE_MAX);
-    const grade = { id: U.uid(), subject: String(g.subject || "").trim() || "Sonstige", value, weight: g.weight ? Number(g.weight) : 1, label: g.label ? String(g.label).trim() : null, date: g.date || U.todayYMD(), createdAt: Date.now() };
+    const scale = g.scale === "points" ? "points" : (g.scale === "grade" ? "grade" : (state.settings.gradeScale || "grade"));
+    const sc = gradeScaleInfo(scale);
+    const value = U.clamp(Number(g.value), sc.min, sc.max);
+    const category = g.category && (CONST.GRADE_CATEGORIES || []).some((c) => c.id === g.category) ? g.category : null;
+    const grade = { id: U.uid(), subject: String(g.subject || "").trim() || "Sonstige", value, weight: g.weight ? Number(g.weight) : 1, label: g.label ? String(g.label).trim() : null, scale, category, date: g.date || U.todayYMD(), createdAt: Date.now() };
     patch((s) => s.grades.push(grade));
     return grade;
   }
@@ -294,14 +308,20 @@ window.Store = (function () {
   function subjectAverage(subject) {
     const list = state.grades.filter((g) => g.subject === subject);
     if (!list.length) return null;
-    let sum = 0, w = 0; list.forEach((g) => { sum += g.value * (g.weight || 1); w += g.weight || 1; });
+    let sum = 0, w = 0; list.forEach((g) => { const ew = effWeight(g); sum += g.value * ew; w += ew; });
     return w ? U.round(sum / w, 2) : null;
   }
   function subjectAverages() { const map = {}; gradeSubjects().forEach((s) => { map[s] = subjectAverage(s); }); return map; }
   function gradeSubjects() { return [...new Set(state.grades.map((g) => g.subject))].sort(); }
-  function overallAverage() { const a = subjectAverages(); const vals = Object.values(a).filter((x) => x != null); if (!vals.length) return null; return U.round(vals.reduce((x, y) => x + y, 0) / vals.length, 2); }
-  // Notenziel-Rechner: gewichtete Summe/Gewicht eines Fachs.
-  function gradeSumWeight(subject) { let sum = 0, w = 0; state.grades.filter((g) => g.subject === subject).forEach((g) => { sum += g.value * (g.weight || 1); w += (g.weight || 1); }); return { sum, w }; }
+  // Gesamtschnitt nur ueber Faecher der aktiven Skala (gemischte Skalen sind nicht vergleichbar).
+  function overallAverage() {
+    const scale = state.settings.gradeScale || "grade";
+    const vals = gradeSubjects().filter((s) => scaleOf(s) === scale).map(subjectAverage).filter((x) => x != null);
+    if (!vals.length) return null;
+    return U.round(vals.reduce((x, y) => x + y, 0) / vals.length, 2);
+  }
+  // Notenziel-Rechner: effektiv gewichtete Summe/Gewicht eines Fachs.
+  function gradeSumWeight(subject) { let sum = 0, w = 0; state.grades.filter((g) => g.subject === subject).forEach((g) => { const ew = effWeight(g); sum += g.value * ew; w += ew; }); return { sum, w }; }
   // Welche Note (Hoechstwert) brauchst du in der naechsten Arbeit (Gewicht), um Ziel-Schnitt zu erreichen?
   function neededGrade(subject, target, weight) { const { sum, w } = gradeSumWeight(subject); weight = Number(weight) || 1; return U.round((Number(target) * (w + weight) - sum) / weight, 2); }
   // Welcher Schnitt ergibt sich, wenn die naechste Note "value" (Gewicht) ist?
@@ -491,7 +511,7 @@ window.Store = (function () {
     // timetable
     dayKey, setTimetableEntry, removeTimetableEntry, nextLessonOf, nextLessonNow,
     // grades
-    addGrade, removeGrade, subjectAverage, subjectAverages, gradeSubjects, overallAverage, neededGrade, projectedAverage,
+    addGrade, removeGrade, subjectAverage, subjectAverages, gradeSubjects, overallAverage, neededGrade, projectedAverage, scaleOf, gradeScaleInfo,
     // exams
     addExam, removeExam, upcomingExams,
     // habits

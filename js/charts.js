@@ -28,7 +28,7 @@ window.Charts = (function () {
       const x = i * bw + bw * 0.18, y = H - pad - h, w = bw * 0.64;
       svg.appendChild(s("rect", { x, y, width: w, height: Math.max(0, h), rx: 3, class: "chart-bar" + (d.highlight ? " on" : "") }));
       svg.appendChild(s("text", { x: x + w / 2, y: H - pad + 12, class: "chart-x", "text-anchor": "middle" }, d.label));
-      if (d.value > 0) svg.appendChild(s("text", { x: x + w / 2, y: y - 3, class: "chart-val", "text-anchor": "middle" }, opts.fmt ? opts.fmt(d.value) : String(d.value)));
+      if (d.value > 0) svg.appendChild(s("text", { x: x + w / 2, y: y - 3, class: "chart-val", "text-anchor": "middle" }, opts.fmt ? opts.fmt(d.value, d) : String(d.value)));
     });
     return svg;
   }
@@ -45,20 +45,26 @@ window.Charts = (function () {
   }
 
   function gradeBars() {
-    const avgs = Store.subjectAverages();
-    const subjects = Object.keys(avgs);
+    const subjects = Store.gradeSubjects();
     if (!subjects.length) return null;
-    // Note 1 (best) -> hoher Balken; Note 6 -> niedrig. Wert = 6 - note.
-    const data = subjects.map((sub) => ({ label: sub.slice(0, 4), value: U.round(6 - avgs[sub], 2), sub, raw: avgs[sub] }));
-    return barChart(data, { max: 5, fmt: (v) => U.round(6 - v, 1) });
+    // Hoehe = "wie gut" (0..1), skala-abhaengig normalisiert -> Faecher beider Skalen vergleichbar.
+    const data = subjects.map((sub) => {
+      const avg = Store.subjectAverage(sub), sc = Store.gradeScaleInfo(Store.scaleOf(sub)), span = (sc.max - sc.min) || 1;
+      const frac = sc.betterIsLower ? (sc.max - avg) / span : (avg - sc.min) / span;
+      return { label: sub.slice(0, 4), value: U.round(frac, 3), sub, raw: avg };
+    });
+    return barChart(data, { max: 1, fmt: (v, d) => String(U.round(d.raw, 1)) });
   }
 
   // Linien-Sparkline auf der Notenskala (1..6). Oben = bessere Note. area + Linie + letzter Punkt.
-  function lineChart(values) {
-    const W = 280, H = 90, pad = 8, min = 1, max = 6, n = values.length;
+  function lineChart(values, opts) {
+    opts = opts || {};
+    const W = 280, H = 90, pad = 8, n = values.length;
+    const min = opts.min != null ? opts.min : 1, max = opts.max != null ? opts.max : 6;
+    const betterIsLower = opts.betterIsLower !== false; // Standard: Noten (kleiner=besser)
     if (n < 2) return null;
     const dx = (W - pad * 2) / (n - 1);
-    const yOf = (v) => pad + (H - pad * 2) * ((Math.min(max, Math.max(min, v)) - min) / (max - min));
+    const yOf = (v) => { const f = (Math.min(max, Math.max(min, v)) - min) / ((max - min) || 1); return pad + (H - pad * 2) * (betterIsLower ? f : 1 - f); };
     const pts = values.map((v, i) => [pad + i * dx, yOf(v)]);
     const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
     const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", preserveAspectRatio: "none" });
@@ -71,11 +77,13 @@ window.Charts = (function () {
 
   // Noten-Verlauf: laufender gewichteter Schnitt aller Noten in Datums-Reihenfolge.
   function gradeTrend() {
-    const g = Store.get().grades.filter((x) => x.date).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const scale = (Store.get().settings.gradeScale) || "grade";
+    const g = Store.get().grades.filter((x) => x.date && (x.scale || "grade") === scale).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     if (g.length < 2) return null;
     let sum = 0, w = 0; const series = [];
     g.forEach((x) => { sum += x.value * (x.weight || 1); w += (x.weight || 1); series.push(U.round(sum / w, 2)); });
-    return lineChart(series);
+    const sc = Store.gradeScaleInfo(scale);
+    return lineChart(series, { min: sc.min, max: sc.max, betterIsLower: sc.betterIsLower });
   }
 
   function habitStrip(habit, days) {

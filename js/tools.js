@@ -71,7 +71,7 @@ const TOOL_SCHEMAS = [
   { type: "function", function: { name: "set_timetable_entry", description: "Schulstunde eintragen.", parameters: { type: "object", properties: { day: { type: "string" }, subject: { type: "string" }, period: { type: "integer" }, start: { type: "string" }, end: { type: "string" }, room: { type: "string" } }, required: ["day", "subject"] } } },
   { type: "function", function: { name: "get_timetable", description: "Stundenplan (Woche oder ein Tag).", parameters: { type: "object", properties: { day: { type: "string" } } } } },
 
-  { type: "function", function: { name: "add_grade", description: "Schulnote eintragen (1=sehr gut .. 6=ungenuegend).", parameters: { type: "object", properties: { subject: { type: "string" }, value: { type: "number" }, weight: { type: "number", description: "Gewichtung, z.B. 2 fuer Klassenarbeit." }, label: { type: "string" } }, required: ["subject", "value"] } } },
+  { type: "function", function: { name: "add_grade", description: "Note eintragen. Standard 1-6 (1=sehr gut), oder Oberstufen-Punkte 0-15 mit scale='points'.", parameters: { type: "object", properties: { subject: { type: "string" }, value: { type: "number" }, weight: { type: "number", description: "Gewichtung, z.B. 2 fuer Klassenarbeit." }, label: { type: "string" }, scale: { type: "string", enum: ["grade", "points"] }, category: { type: "string", enum: ["schriftlich", "muendlich", "sonstige"] } }, required: ["subject", "value"] } } },
   { type: "function", function: { name: "list_grades", description: "Noten + Durchschnitt (gesamt oder je Fach).", parameters: { type: "object", properties: { subject: { type: "string" } } } } },
 
   { type: "function", function: { name: "add_exam", description: "Klassenarbeit/Test mit Datum anlegen.", parameters: { type: "object", properties: { subject: { type: "string" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" } }, required: ["subject", "date"] } } },
@@ -128,7 +128,7 @@ async function runTool(name, args, ctx) {
     case "set_timetable_entry": { const r = Store.setTimetableEntry(args); return r ? `Stundenplan: ${args.subject} am ${args.day}${args.period ? ` (${args.period}. Stunde)` : ""}.` : "Wochentag nicht erkannt."; }
     case "get_timetable": return timetableText(args.day);
 
-    case "add_grade": { const g = Store.addGrade({ subject: args.subject, value: args.value, weight: args.weight, label: args.label }); const avg = Store.subjectAverage(g.subject); return `Note ${g.value} in ${g.subject} eingetragen. Schnitt ${g.subject}: ${avg}.`; }
+    case "add_grade": { const g = Store.addGrade({ subject: args.subject, value: args.value, weight: args.weight, label: args.label, scale: args.scale, category: args.category }); const avg = Store.subjectAverage(g.subject); return `${g.scale === "points" ? "Punkte" : "Note"} ${g.value} in ${g.subject} eingetragen. Schnitt ${g.subject}: ${avg}.`; }
     case "list_grades": {
       if (args.subject) { const avg = Store.subjectAverage(args.subject); const list = Store.get().grades.filter((x) => x.subject.toLowerCase() === String(args.subject).toLowerCase()); return list.length ? `${args.subject} (Schnitt ${avg}): ` + list.map((g) => g.value + (g.label ? ` (${g.label})` : "")).join(", ") : `Keine Noten in ${args.subject}.`; }
       const a = Store.subjectAverages(); const keys = Object.keys(a); if (!keys.length) return "Noch keine Noten."; return `Gesamtschnitt: ${Store.overallAverage()}. Je Fach: ` + keys.map((k) => `${k} ${a[k]}`).join(", ") + ".";
@@ -156,11 +156,17 @@ async function runTool(name, args, ctx) {
 
     case "grade_goal": {
       const subject = String(args.subject || "").trim(); const target = Number(args.target); const weight = Number(args.weight) || 1;
-      if (!subject || !(target >= 1 && target <= 6)) return "Bitte Fach und Wunsch-Schnitt (1-6) angeben.";
-      const cur = Store.subjectAverage(subject); const needed = Store.neededGrade(subject, target, weight);
-      if (needed >= 6) return `Um in ${subject} einen Schnitt von ${target} zu halten, reicht selbst eine 6 (Gewicht ${weight}). Aktueller Schnitt: ${cur != null ? cur : "noch keine Noten"}.`;
-      if (needed < 1) return `Ein Schnitt von ${target} ist in ${subject} mit einer einzelnen Note (Gewicht ${weight}) nicht mehr erreichbar. Aktueller Schnitt: ${cur != null ? cur : "noch keine Noten"}.`;
-      return `Um in ${subject} einen Schnitt von ${target} zu erreichen, brauchst du in der naechsten Arbeit (Gewicht ${weight}) mindestens eine ${needed} (oder besser). Aktueller Schnitt: ${cur != null ? cur : "noch keine Noten"}.`;
+      const sc = Store.gradeScaleInfo(subject ? Store.scaleOf(subject) : "grade");
+      if (!subject || !(target >= sc.min && target <= sc.max)) return `Bitte Fach und Wunsch-${sc.betterIsLower ? "Schnitt" : "Punkte"} (${sc.min}-${sc.max}) angeben.`;
+      const cur = Store.subjectAverage(subject); const needed = Store.neededGrade(subject, target, weight); const curTxt = cur != null ? cur : "noch keine Noten";
+      if (sc.betterIsLower) {
+        if (needed >= sc.max) return `Um in ${subject} einen Schnitt von ${target} zu halten, reicht selbst eine ${sc.max} (Gewicht ${weight}). Aktueller Schnitt: ${curTxt}.`;
+        if (needed < sc.min) return `Ein Schnitt von ${target} ist in ${subject} mit einer einzelnen Note (Gewicht ${weight}) nicht mehr erreichbar. Aktueller Schnitt: ${curTxt}.`;
+        return `Um in ${subject} einen Schnitt von ${target} zu erreichen, brauchst du in der naechsten Arbeit (Gewicht ${weight}) mindestens eine ${needed} (oder besser). Aktueller Schnitt: ${curTxt}.`;
+      }
+      if (needed <= sc.min) return `Um in ${subject} ${target} Punkte zu halten, reichen selbst ${sc.min} Punkte (Gewicht ${weight}). Aktueller Schnitt: ${curTxt}.`;
+      if (needed > sc.max) return `${target} Punkte sind in ${subject} mit einer einzelnen Note (Gewicht ${weight}) nicht mehr erreichbar. Aktueller Schnitt: ${curTxt}.`;
+      return `Um in ${subject} ${target} Punkte zu erreichen, brauchst du in der naechsten Arbeit (Gewicht ${weight}) mindestens ${needed} Punkte (oder mehr). Aktueller Schnitt: ${curTxt}.`;
     }
     case "add_vocab": { const c = Store.addVocab({ front: args.front, back: args.back }); return `Vokabel gespeichert: ${c.front} = ${c.back}.`; }
     case "list_vocab": { const due = Store.vocabDue().length, total = Store.get().vocab.length; return `${total} Vokabeln, davon ${due} faellig.`; }

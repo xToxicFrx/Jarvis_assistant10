@@ -504,18 +504,21 @@ window.UI = (function () {
   }
 
   function openGradeModal() {
+    const scale = Store.get().settings.gradeScale || "grade";
+    const sc = Store.gradeScaleInfo(scale);
     const subjI = el("input", { type: "text", list: "subjectList", placeholder: "Fach" });
-    const valI = el("input", { type: "number", min: "1", max: "6", step: "0.25", placeholder: "z.B. 2 oder 2.5" });
+    const valI = el("input", { type: "number", min: String(sc.min), max: String(sc.max), step: String(sc.step), placeholder: scale === "points" ? "z.B. 12" : "z.B. 2 oder 2.5" });
     const wI = el("input", { type: "number", min: "0.5", max: "5", step: "0.5", value: "1" });
+    const catSel = el("select", {}, [el("option", { value: "" }, "Keine Kategorie")].concat(CONST.GRADE_CATEGORIES.map((c) => el("option", { value: c.id }, c.label + " (×" + c.weight + ")"))));
     const labI = el("input", { type: "text", placeholder: "z.B. Klassenarbeit (optional)" });
-    const save = () => { const subject = subjI.value.trim(); const value = Number(valI.value); if (!subject) { subjI.focus(); return; } if (!(value >= 1 && value <= 6)) { valI.focus(); return; } Store.addGrade({ subject, value, weight: Number(wI.value) || 1, label: labI.value.trim() || null }); closeModal(); toast("Note eingetragen", "success"); };
-    openModal("Note eintragen", el("div", { class: "modal-body" }, [subjectDatalist(), field("Fach", subjI), el("div", { class: "field-row" }, [field("Note (1-6)", valI), field("Gewicht", wI)]), field("Bezeichnung", labI), actions("Eintragen", save)]));
+    const save = () => { const subject = subjI.value.trim(); const value = Number(valI.value); if (!subject) { subjI.focus(); return; } if (!(value >= sc.min && value <= sc.max)) { valI.focus(); return; } Store.addGrade({ subject, value, weight: Number(wI.value) || 1, label: labI.value.trim() || null, scale, category: catSel.value || null }); closeModal(); toast("Note eingetragen", "success"); };
+    openModal("Note eintragen", el("div", { class: "modal-body" }, [subjectDatalist(), field("Fach", subjI), el("div", { class: "field-row" }, [field(scale === "points" ? "Punkte (0-15)" : "Note (1-6)", valI), field("Gewicht", wI)]), field("Kategorie", catSel), field("Bezeichnung", labI), actions("Eintragen", save)]));
   }
   function openGradeListModal(subject) {
     const list = Store.get().grades.filter((g) => g.subject === subject);
     const body = el("div", { class: "modal-body" }, [el("div", { class: "muted mb", text: "Schnitt: " + Store.subjectAverage(subject) })]);
     const dated = list.filter((g) => g.date).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    if (dated.length >= 2 && Charts.lineChart) { const sp = Charts.lineChart(dated.map((g) => g.value)); if (sp) { body.appendChild(el("div", { class: "stat-title muted", text: "Verlauf (oben = besser)" })); body.appendChild(sp); } }
+    if (dated.length >= 2 && Charts.lineChart) { const sc = Store.gradeScaleInfo(Store.scaleOf(subject)); const sp = Charts.lineChart(dated.map((g) => g.value), { min: sc.min, max: sc.max, betterIsLower: sc.betterIsLower }); if (sp) { body.appendChild(el("div", { class: "stat-title muted", text: "Verlauf (oben = besser)" })); body.appendChild(sp); } }
     list.forEach((g) => body.appendChild(el("div", { class: "grade-item" }, [el("span", { class: "grade-val", text: String(g.value) }), el("span", { class: "muted", text: (g.label || "") + (g.weight !== 1 ? ` ·×${g.weight}` : "") + " · " + g.date }), iconBtn("i-trash", "Loeschen", () => { Store.removeGrade(g.id); closeModal(); toast("Geloescht"); })])));
     body.appendChild(el("div", { class: "modal-actions" }, el("button", { class: "btn btn-block", type: "button", text: "Schliessen", onclick: closeModal })));
     openModal("Noten: " + subject, body);
@@ -524,24 +527,33 @@ window.UI = (function () {
   function openGradeGoalModal(prefillSubject) {
     const subjects = Store.gradeSubjects();
     const list = el("datalist", { id: "goalSubjects" }, subjects.map((x) => el("option", { value: x })));
+    const gScale0 = Store.gradeScaleInfo(prefillSubject ? Store.scaleOf(prefillSubject) : (Store.get().settings.gradeScale || "grade"));
     const subjI = el("input", { type: "text", list: "goalSubjects", placeholder: "Fach", value: prefillSubject || subjects[0] || "" });
-    const targetI = el("input", { type: "number", min: "1", max: "6", step: "0.25", value: "2" });
+    const targetI = el("input", { type: "number", min: "0", max: "15", step: "0.25", value: gScale0.betterIsLower ? "2" : "12" });
     const weightI = el("input", { type: "number", min: "0.5", max: "5", step: "0.5", value: "2" });
     const result = el("div", { class: "goal-result" });
     function calc() {
       const subject = subjI.value.trim(), target = Number(targetI.value), weight = Number(weightI.value) || 1;
+      const sc = Store.gradeScaleInfo(subject ? Store.scaleOf(subject) : (Store.get().settings.gradeScale || "grade"));
+      const lo = sc.betterIsLower, unit = lo ? "Note" : "Punkte";
       clear(result);
-      if (!subject || !(target >= 1 && target <= 6)) { result.appendChild(el("div", { class: "muted", text: "Fach und Wunsch-Schnitt (1-6) eingeben." })); return; }
+      if (!subject || !(target >= sc.min && target <= sc.max)) { result.appendChild(el("div", { class: "muted", text: `Fach und Wunsch-${lo ? "Schnitt" : "Punkte"} (${sc.min}-${sc.max}) eingeben.` })); return; }
       const cur = Store.subjectAverage(subject), needed = Store.neededGrade(subject, target, weight);
       let msg, cls;
-      if (needed >= 6) { msg = "Selbst eine 6 reicht - du haeltst den Schnitt locker."; cls = "ok"; }
-      else if (needed < 1) { msg = "Mit einer einzelnen Note nicht mehr erreichbar (selbst eine 1 reicht nicht)."; cls = "bad"; }
-      else { msg = `Du brauchst mindestens eine ${needed} (oder besser).`; cls = needed >= 4 ? "bad" : needed >= 2.5 ? "warn" : "ok"; }
+      if (lo) {
+        if (needed >= sc.max) { msg = `Selbst eine ${sc.max} reicht - du haeltst den Schnitt locker.`; cls = "ok"; }
+        else if (needed < sc.min) { msg = "Mit einer einzelnen Note nicht mehr erreichbar."; cls = "bad"; }
+        else { msg = `Du brauchst mindestens eine ${needed} (oder besser).`; cls = needed >= 4 ? "bad" : needed >= 2.5 ? "warn" : "ok"; }
+      } else {
+        if (needed <= sc.min) { msg = `Selbst ${sc.min} Punkte reichen - locker.`; cls = "ok"; }
+        else if (needed > sc.max) { msg = "Mit einer einzelnen Note nicht mehr erreichbar (selbst 15 reichen nicht)."; cls = "bad"; }
+        else { msg = `Du brauchst mindestens ${needed} Punkte (oder mehr).`; cls = needed >= 11 ? "bad" : needed >= 7 ? "warn" : "ok"; }
+      }
       result.appendChild(el("div", { class: "goal-needed " + cls, text: msg }));
       result.appendChild(el("div", { class: "muted small", text: `Aktueller Schnitt in ${subject}: ${cur != null ? cur : "noch keine Noten"} · Gewicht: ${weight}` }));
-      result.appendChild(el("div", { class: "muted small", text: "Schnitt je naechster Note:" }));
+      result.appendChild(el("div", { class: "muted small", text: `Schnitt je naechster ${unit}:` }));
       const table = el("div", { class: "goal-table" });
-      [1, 2, 3, 4, 5, 6].forEach((g) => table.appendChild(el("div", { class: "goal-cell" }, [el("b", { text: String(g) }), el("span", { text: "→ " + Store.projectedAverage(subject, g, weight) })])));
+      (lo ? [1, 2, 3, 4, 5, 6] : [15, 12, 10, 8, 5, 2]).forEach((g) => table.appendChild(el("div", { class: "goal-cell" }, [el("b", { text: String(g) }), el("span", { text: "→ " + Store.projectedAverage(subject, g, weight) })])));
       result.appendChild(table);
     }
     [subjI, targetI, weightI].forEach((i) => i.addEventListener("input", calc));
@@ -648,6 +660,7 @@ window.UI = (function () {
     const briefBox = seg([["1", "An"], ["0", "Aus"]], s.briefingEnabled ? "1" : "0", (v) => Store.setSetting("briefingEnabled", v === "1"));
     const voiceBox = seg([["auto", "ElevenLabs"], ["browser", "Browser"], ["off", "Aus"]], s.voiceMode || "auto", (v) => Store.setSetting("voiceMode", v));
     const animBox = seg([["full", "Voll"], ["reduced", "Reduziert"]], s.reduceAnim ? "reduced" : "full", (v) => { Store.setSetting("reduceAnim", v === "reduced"); applyAnimPref(); });
+    const gradeBox = seg([["grade", "Noten 1–6"], ["points", "Punkte 0–15"]], s.gradeScale || "grade", (v) => { Store.setSetting("gradeScale", v); render(Store.get()); });
     const cloud = el("div", { class: "cloud-pill" + (Store.cloudEnabled ? " on" : "") }, [el("span", { class: "d" }), el("span", { text: Store.cloudEnabled ? (s.encryptCloud ? "Cloud-Sync aktiv, verschluesselt" : "Cloud-Sync aktiv") : "Cloud-Sync aus (nur dieses Geraet)" })]);
     const fileIn = el("input", { type: "file", accept: "application/json" }); fileIn.addEventListener("change", importBackup);
     const dataRow = el("div", { class: "btn-row" }, [el("button", { class: "btn", type: "button", onclick: exportBackup }, [icon("i-download"), document.createTextNode("Backup")]), el("button", { class: "btn", type: "button", onclick: () => fileIn.click() }, [icon("i-upload"), document.createTextNode("Wiederherstellen")]), fileIn]);
@@ -659,6 +672,7 @@ window.UI = (function () {
       field("Tagesbriefing", briefBox.box),
       field("Stimme", voiceBox.box),
       field("Animationen", animBox.box),
+      field("Notenmodus (neue Noten)", gradeBox.box),
       field("Benachrichtigungen", notif),
       field("Daten", dataRow), field("Synchronisierung", cloud),
       el("div", { class: "muted small", text: "Version " + CONST.APP_VERSION + " · abmelden schliesst die Sitzung." }),
