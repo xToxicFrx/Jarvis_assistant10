@@ -2,11 +2,12 @@
 // sw.js — minimaler Service-Worker (PWA-Hülle), Network-first.
 // Supabase-/CDN-Requests werden NIE gecacht (Auth + Live-Daten).
 // ============================================================
-const CACHE = "fitrank-v1";
+const CACHE = "fitrank-v2";
 const ASSETS = [
   "./", "./index.html", "./styles.css",
   "./js/app.js", "./js/ui.js", "./js/db.js", "./js/tracker.js",
-  "./js/avatar.js", "./js/config.js",
+  "./js/avatar.js", "./js/config.js", "./js/leveling.js",
+  "./js/quests.js", "./js/charts.js", "./js/streaks.js",
   "./manifest.webmanifest", "./icons/icon.svg",
 ];
 

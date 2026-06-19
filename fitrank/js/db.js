@@ -114,6 +114,89 @@ export async function workoutSets(workoutId) {
   return data;
 }
 
+// ---------- Trainingspläne (Routinen) ----------
+export async function listRoutines(userId) {
+  const { data, error } = await supabase
+    .from("routines").select("*").eq("user_id", userId).order("created_at");
+  if (error) throw error;
+  return data;
+}
+export async function createRoutine(userId, name) {
+  const { data, error } = await supabase
+    .from("routines").insert({ user_id: userId, name }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function deleteRoutine(id) {
+  const { error } = await supabase.from("routines").delete().eq("id", id);
+  if (error) throw error;
+}
+export async function listRoutineExercises(routineId) {
+  const { data, error } = await supabase
+    .from("routine_exercises").select("*, exercises(name, muscle_group)")
+    .eq("routine_id", routineId).order("position");
+  if (error) throw error;
+  return data;
+}
+export async function addRoutineExercise(userId, routineId, exerciseId, targetSets, targetReps, position) {
+  const { data, error } = await supabase.from("routine_exercises")
+    .insert({ user_id: userId, routine_id: routineId, exercise_id: exerciseId, target_sets: targetSets, target_reps: targetReps, position })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+export async function removeRoutineExercise(id) {
+  const { error } = await supabase.from("routine_exercises").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- Körperdaten ----------
+export async function addBodyMetric(userId, date, weight) {
+  const { error } = await supabase.from("body_metrics")
+    .upsert({ user_id: userId, date, weight }, { onConflict: "user_id,date" });
+  if (error) throw error;
+}
+export async function listBodyMetrics(userId, limit = 60) {
+  const { data, error } = await supabase.from("body_metrics")
+    .select("*").eq("user_id", userId).order("date", { ascending: true }).limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+// ---------- Habits ----------
+export async function listHabits(userId) {
+  const { data, error } = await supabase.from("habits")
+    .select("*").eq("user_id", userId).order("created_at");
+  if (error) throw error;
+  return data;
+}
+export async function createHabit(userId, name, icon) {
+  const { data, error } = await supabase.from("habits")
+    .insert({ user_id: userId, name, icon }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function deleteHabit(id) {
+  const { error } = await supabase.from("habits").delete().eq("id", id);
+  if (error) throw error;
+}
+export async function listHabitLogs(userId, sinceDate) {
+  const { data, error } = await supabase.from("habit_logs")
+    .select("habit_id, date").eq("user_id", userId).gte("date", sinceDate);
+  if (error) throw error;
+  return data;
+}
+export async function logHabit(userId, habitId, date) {
+  const { error } = await supabase.from("habit_logs")
+    .upsert({ user_id: userId, habit_id: habitId, date }, { onConflict: "habit_id,date" });
+  if (error) throw error;
+}
+export async function unlogHabit(habitId, date) {
+  const { error } = await supabase.from("habit_logs")
+    .delete().eq("habit_id", habitId).eq("date", date);
+  if (error) throw error;
+}
+
 // ---------- Freunde ----------
 export async function findUserByUsername(username) {
   const { data, error } = await supabase.rpc("find_user_by_username", { p_username: username });

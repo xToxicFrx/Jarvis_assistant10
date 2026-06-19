@@ -107,3 +107,75 @@ input:focus, select:focus { outline: none; border-color: var(--accent-2); }
   .setform { grid-template-columns: 1fr 1fr; }
   .setform select { grid-column: 1 / -1; }
 }
+
+/* ===== Phase 2/3: Navigation, Quests, Gear, Charts, Habits ===== */
+
+.xpbar__fill { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); width: 0; }
+
+/* Bottom-Nav */
+.content { padding-bottom: 84px; }
+.bottomnav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; justify-content: space-around;
+  background: rgba(20,24,36,.96); border-top: 1px solid var(--line);
+  padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+  backdrop-filter: blur(8px);
+}
+.navbtn { background: none; border: 0; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; border-radius: 12px; }
+.navbtn.is-active { color: var(--ink); }
+.navbtn.is-active .navbtn__i { transform: translateY(-1px); filter: drop-shadow(0 4px 8px rgba(255,91,127,.5)); }
+.navbtn__i { font-size: 1.3rem; }
+.navbtn__l { font-size: .68rem; }
+
+/* Chip-Label mit Icon */
+.chip__l { display: block; font-size: .68rem; color: var(--muted); margin-top: 2px; }
+
+/* Quests */
+.quests { display: flex; flex-direction: column; gap: 10px; }
+.quest { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.quest.is-done { border-color: var(--ok); }
+.quest__top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; }
+.minixp { height: 7px; background: var(--bg-2); border-radius: 999px; overflow: hidden; margin: 8px 0 4px; }
+.minixp__fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+.tag--day { background: rgba(106,163,255,.18); color: var(--accent-2); }
+.tag--week { background: rgba(255,91,127,.16); color: var(--accent); }
+
+/* Gear */
+.gear { display: flex; flex-direction: column; gap: 12px; }
+.gear__row { display: flex; flex-direction: column; gap: 6px; }
+.gear__slot { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.gear__opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.gearopt { background: var(--card); border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; border-radius: 999px; font-size: .85rem; }
+.gearopt.is-active { border-color: var(--accent); color: var(--accent); }
+.gearopt.is-locked { color: var(--muted); opacity: .6; }
+
+/* Routinen / Pläne */
+.routines { display: flex; flex-direction: column; gap: 10px; }
+.routine { padding: 0; overflow: hidden; }
+.routine__head { width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: 0; color: var(--ink); padding: 14px 16px; font-size: 1rem; }
+.routine__body { padding: 0 16px 14px; }
+.routine__actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.setform--plan { grid-template-columns: 1fr auto; }
+.setform--plan input:first-child { grid-column: auto; }
+
+/* Charts */
+.chart { display: block; }
+.chart__axis { stroke: var(--line); stroke-width: 1; }
+.chart__line { stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart__dot { fill: var(--accent-2); }
+.chart__bar { fill: var(--accent-2); }
+.chart__lbl { fill: var(--muted); font-size: 9px; }
+.chart__empty { fill: var(--muted); font-size: 12px; }
+
+/* Habits */
+.habits { display: flex; flex-direction: column; gap: 10px; }
+.habit { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.habit__check { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; border: 2px solid var(--line); background: var(--bg-2); color: var(--ok); font-size: 1.1rem; font-weight: 700; }
+.habit__check.is-on { border-color: var(--ok); background: rgba(70,211,154,.15); }
+.habit__main { flex: 1; }
+.setform--habit { grid-template-columns: 56px 1fr auto; }
+.habit__icon-in { text-align: center; }
+
+/* Plan-Chips im Live-Workout */
+.planchips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.planchip { background: var(--card); border: 1px solid var(--line); color: var(--ink); padding: 7px 12px; border-radius: 999px; font-size: .8rem; }

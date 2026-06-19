@@ -28,20 +28,27 @@ fitrank/
 ├── sw.js                 Service-Worker
 ├── vercel.json           Security-Header (CSP, Permissions-Policy)
 ├── icons/icon.svg
-├── db/schema.sql         ⭐ Tabellen + RLS + Anti-Cheat-Trigger
+├── db/
+│   ├── schema.sql        ⭐ Tabellen + RLS + Anti-Cheat-Trigger (Phase 0/1)
+│   └── migration_phase3.sql  Trainingspläne (Phase 3)
 └── js/
     ├── config.js         ⭐ hier Supabase-URL + anon-Key eintragen
     ├── db.js             Supabase-Client + Datenzugriff
     ├── tracker.js        Live-Verifizierung (GPS/Bewegung/Timer)
-    ├── avatar.js         geschichteter SVG-RPG-Avatar
-    ├── ui.js             Oberfläche (Login, Dashboard, Live-Workout)
+    ├── avatar.js         SVG-RPG-Avatar + Gear-System
+    ├── leveling.js       XP/Level-Kurve (Client, = Server-SQL)
+    ├── quests.js         tägliche/wöchentliche Ziele aus echten Daten
+    ├── streaks.js        Habit-Streak-Berechnung
+    ├── charts.js         SVG-Charts (Gewicht, Wochen-Volumen)
+    ├── ui.js             Oberfläche (Nav + alle Views + Live-Workout)
     └── app.js            Einstiegspunkt
 ```
 
 ## Einrichtung (Schritt für Schritt)
 1. **Supabase-Projekt** kostenlos anlegen: https://supabase.com → „New project".
-2. **Schema laden:** Im Supabase-Dashboard → *SQL Editor* → Inhalt von
-   `db/schema.sql` einfügen → **Run**. (Legt Tabellen, RLS-Regeln und Trigger an.)
+2. **Schema laden:** Im Supabase-Dashboard → *SQL Editor* → zuerst Inhalt von
+   `db/schema.sql` einfügen → **Run**, dann `db/migration_phase3.sql` → **Run**.
+   (Legt Tabellen, RLS-Regeln und Trigger an.)
 3. **Keys eintragen:** Supabase → *Project Settings → API*. Kopiere „Project URL" und
    „anon public" Key in `js/config.js`. (Beide sind öffentlich/ungefährlich dank RLS.)
 4. **Google-Login (optional):** Supabase → *Authentication → Providers → Google* aktivieren.
@@ -69,8 +76,8 @@ fitrank/
 ## Status & nächste Phasen
 - [x] Phase 0: Setup, Schema + RLS + Anti-Cheat-Trigger, App-Hülle
 - [x] Phase 1: Auth, verifiziertes Live-Workout, Logbuch/Sätze, PR-Erkennung
-- [ ] Phase 2: Avatar-Ausbau (Gear-Unlocks, Quests)
-- [ ] Phase 3: Trainingspläne, Kalender, Körperdaten/Charts, Habits/Streaks
+- [x] Phase 2: Avatar-Gear (level-freigeschaltet, an-/ablegbar) + Quests
+- [x] Phase 3: Trainingspläne, Wochen-Volumen, Körpergewicht-Chart, Habits/Streaks
 - [ ] Phase 4: Freunde, verifizierte Bestenliste, Wochen-Challenges
 - [ ] Phase 5: Web-Bluetooth-Pulsmessung
 - [ ] Später: native Hülle (Apple Health / Health Connect), Ranked-Seasons, Premium-Kosmetik
