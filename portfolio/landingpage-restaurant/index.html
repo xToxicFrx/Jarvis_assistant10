@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bella Notte — Italienisches Restaurant in [Stadt]</title>
+  <meta name="description" content="Bella Notte – authentische italienische Küche, frische Pasta und Pizza aus dem Holzofen. Jetzt Tisch reservieren." />
+
+  <!-- Open Graph (für schöne Vorschau beim Teilen) -->
+  <meta property="og:title" content="Bella Notte — Italienisches Restaurant" />
+  <meta property="og:description" content="Authentische italienische Küche, frische Pasta & Pizza aus dem Holzofen." />
+  <meta property="og:type" content="website" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ===== Navigation ===== -->
+  <header class="nav" id="top">
+    <div class="container nav__inner">
+      <a href="#top" class="nav__logo">Bella&nbsp;Notte</a>
+
+      <nav class="nav__links" id="navLinks" aria-label="Hauptnavigation">
+        <a href="#menu">Speisekarte</a>
+        <a href="#about">Über uns</a>
+        <a href="#gallery">Galerie</a>
+        <a href="#hours">Öffnungszeiten</a>
+        <a href="#reserve" class="btn btn--small">Reservieren</a>
+      </nav>
+
+      <button class="nav__toggle" id="navToggle" aria-label="Menü öffnen" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== Hero ===== -->
+  <section class="hero">
+    <div class="hero__overlay"></div>
+    <div class="container hero__content">
+      <p class="hero__eyebrow">Authentisch italienisch · seit 1998</p>
+      <h1 class="hero__title">Buona sera.<br />Willkommen bei Bella&nbsp;Notte.</h1>
+      <p class="hero__text">Frische Pasta, Pizza aus dem Holzofen und Weine aus den schönsten Regionen Italiens — mitten in [Stadt].</p>
+      <div class="hero__actions">
+        <a href="#reserve" class="btn">Tisch reservieren</a>
+        <a href="#menu" class="btn btn--ghost">Zur Speisekarte</a>
+      </div>
+    </div>
+    <a href="#menu" class="hero__scroll" aria-label="Nach unten scrollen">▾</a>
+  </section>
+
+  <!-- ===== Highlights / Trust ===== -->
+  <section class="strip">
+    <div class="container strip__grid">
+      <div class="strip__item"><span>🍝</span><p>Hausgemachte Pasta — täglich frisch</p></div>
+      <div class="strip__item"><span>🔥</span><p>Pizza aus dem Steinofen</p></div>
+      <div class="strip__item"><span>🍷</span><p>Über 60 italienische Weine</p></div>
+      <div class="strip__item"><span>⭐</span><p>4,8 / 5 bei 1.200+ Gästen</p></div>
+    </div>
+  </section>
+
+  <!-- ===== Speisekarte ===== -->
+  <section class="section" id="menu">
+    <div class="container">
+      <div class="section__head">
+        <p class="section__eyebrow">La Cucina</p>
+        <h2 class="section__title">Unsere Highlights</h2>
+        <p class="section__sub">Eine kleine Auswahl. Die vollständige Karte gibt's bei uns am Tisch.</p>
+      </div>
+
+      <div class="menu">
+        <div class="menu__col">
+          <h3 class="menu__cat">Antipasti</h3>
+          <div class="menu__item"><div><h4>Bruschetta Classica</h4><p>Geröstetes Brot, Tomaten, Basilikum, Knoblauch</p></div><span>7,50&nbsp;€</span></div>
+          <div class="menu__item"><div><h4>Burrata Pugliese</h4><p>Cremige Burrata, Rucola, sonnengetrocknete Tomaten</p></div><span>11,90&nbsp;€</span></div>
+          <div class="menu__item"><div><h4>Vitello Tonnato</h4><p>Dünn geschnittenes Kalb, Thunfisch-Kapern-Creme</p></div><span>12,50&nbsp;€</span></div>
+
+          <h3 class="menu__cat">Pizza</h3>
+          <div class="menu__item"><div><h4>Margherita D.O.P.</h4><p>San-Marzano-Tomaten, Büffelmozzarella, Basilikum</p></div><span>10,90&nbsp;€</span></div>
+          <div class="menu__item"><div><h4>Diavola</h4><p>Scharfe Salami, Chili, Mozzarella</p></div><span>13,50&nbsp;€</span></div>
+        </div>
+
+        <div class="menu__col">
+          <h3 class="menu__cat">Pasta</h3>
+          <div class="menu__item"><div><h4>Tagliatelle al Ragù</h4><p>Hausgemachte Bandnudeln, 6h-Rinderragout</p></div><span>14,90&nbsp;€</span></div>
+          <div class="menu__item"><div><h4>Spaghetti alle Vongole</h4><p>Venusmuscheln, Weißwein, Knoblauch, Petersilie</p></div><span>16,50&nbsp;€</span></div>
+          <div class="menu__item"><div><h4>Gnocchi al Gorgonzola</h4><p>Kartoffel-Gnocchi, cremige Gorgonzola-Sauce, Walnüsse</p></div><span>13,90&nbsp;€</span></div>
+
+          <h3 class="menu__cat">Dolci</h3>
+          <div class="menu__item"><div><h4>Tiramisù della Casa</h4><p>Nach Familienrezept, hausgemacht</p></div><span>6,90&nbsp;€</span></div>
+          <div class="menu__item"><div><h4>Panna Cotta</h4><p>Mit Waldbeeren-Coulis</p></div><span>6,50&nbsp;€</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Über uns ===== -->
+  <section class="about" id="about">
+    <div class="container about__grid">
+      <div class="about__img" role="img" aria-label="Restaurant-Innenraum"></div>
+      <div class="about__text">
+        <p class="section__eyebrow">La Famiglia</p>
+        <h2 class="section__title">Italienische Gastfreundschaft</h2>
+        <p>Seit über 25 Jahren kochen wir mit Leidenschaft für unsere Gäste. Familie Rossi bringt Rezepte aus Neapel und der Toskana an Ihren Tisch — mit frischen Zutaten, oft direkt aus Italien.</p>
+        <p>Ob romantisches Dinner, Familienfeier oder schnelles Mittagessen: Bei uns sind Sie willkommen wie zu Hause. <em>Benvenuti nella famiglia.</em></p>
+        <a href="#reserve" class="btn">Jetzt Tisch sichern</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Galerie ===== -->
+  <section class="section" id="gallery">
+    <div class="container">
+      <div class="section__head">
+        <p class="section__eyebrow">Impressioni</p>
+        <h2 class="section__title">Galerie</h2>
+      </div>
+      <div class="gallery">
+        <div class="gallery__item gallery__item--1"></div>
+        <div class="gallery__item gallery__item--2"></div>
+        <div class="gallery__item gallery__item--3"></div>
+        <div class="gallery__item gallery__item--4"></div>
+        <div class="gallery__item gallery__item--5"></div>
+        <div class="gallery__item gallery__item--6"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Öffnungszeiten + Kontakt ===== -->
+  <section class="hours" id="hours">
+    <div class="container hours__grid">
+      <div>
+        <p class="section__eyebrow">Orari</p>
+        <h2 class="section__title">Öffnungszeiten</h2>
+        <ul class="hours__list">
+          <li><span>Montag</span><span>Ruhetag</span></li>
+          <li><span>Dienstag – Freitag</span><span>17:00 – 23:00</span></li>
+          <li><span>Samstag</span><span>12:00 – 23:30</span></li>
+          <li><span>Sonntag</span><span>12:00 – 22:00</span></li>
+        </ul>
+      </div>
+      <div>
+        <p class="section__eyebrow">Contatto</p>
+        <h2 class="section__title">So finden Sie uns</h2>
+        <p class="hours__contact">
+          Musterstraße 12<br />
+          12345 [Stadt]<br /><br />
+          <a href="tel:+490000000000">+49 (0)000 000 00 00</a><br />
+          <a href="mailto:hallo@bella-notte.de">hallo@bella-notte.de</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Reservierung ===== -->
+  <section class="reserve" id="reserve">
+    <div class="container reserve__inner">
+      <div class="section__head">
+        <p class="section__eyebrow">Prenotazione</p>
+        <h2 class="section__title">Tisch reservieren</h2>
+        <p class="section__sub">Wir melden uns zur Bestätigung. Für mehr als 8 Personen bitte anrufen.</p>
+      </div>
+
+      <form class="form" id="reserveForm" novalidate>
+        <div class="form__row">
+          <label>Name
+            <input type="text" name="name" required placeholder="Ihr Name" />
+          </label>
+          <label>Telefon
+            <input type="tel" name="phone" required placeholder="Für die Bestätigung" />
+          </label>
+        </div>
+        <div class="form__row">
+          <label>Datum
+            <input type="date" name="date" required />
+          </label>
+          <label>Uhrzeit
+            <input type="time" name="time" required />
+          </label>
+          <label>Personen
+            <select name="guests">
+              <option>1</option><option selected>2</option><option>3</option><option>4</option>
+              <option>5</option><option>6</option><option>7</option><option>8</option>
+            </select>
+          </label>
+        </div>
+        <label>Anmerkung (optional)
+          <textarea name="note" rows="3" placeholder="Allergien, Kinderstuhl, besonderer Anlass …"></textarea>
+        </label>
+        <button type="submit" class="btn btn--block">Reservierung anfragen</button>
+        <p class="form__hint" id="formHint" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div>
+        <p class="footer__logo">Bella Notte</p>
+        <p class="footer__small">Authentisch italienisch in [Stadt] · seit 1998</p>
+      </div>
+      <nav class="footer__links" aria-label="Footer">
+        <a href="#menu">Speisekarte</a>
+        <a href="#about">Über uns</a>
+        <a href="#reserve">Reservieren</a>
+        <a href="#hours">Kontakt</a>
+      </nav>
+      <p class="footer__copy">© <span id="year"></span> Bella Notte · Demo-Landingpage</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
