@@ -1,0 +1,6 @@
+node_modules/
+.env
+.vercel
+# config.js enthält nur öffentliche Keys (anon) und darf committet werden.
+# Falls du sie lieber geheim hältst, kommentiere die nächste Zeile ein:
+# js/config.js

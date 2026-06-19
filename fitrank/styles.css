@@ -1,0 +1,109 @@
+/* ===== FitRank — dunkles, gaming-inspiriertes Design ===== */
+:root {
+  --bg: #0e1018;
+  --bg-2: #161a26;
+  --card: #1b2030;
+  --line: #2a3144;
+  --ink: #eef1f7;
+  --muted: #97a0b5;
+  --accent: #ff5b7f;     /* Radiant-Pink */
+  --accent-2: #6aa3ff;   /* Diamant-Blau */
+  --ok: #46d39a;
+  --danger: #ff6b6b;
+  --radius: 16px;
+  --max: 560px;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: radial-gradient(1200px 600px at 50% -10%, #1a2030 0%, var(--bg) 60%);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: max(16px, env(safe-area-inset-top)) 16px 40px;
+  display: flex; justify-content: center;
+}
+#app { width: 100%; max-width: var(--max); }
+h1 { font-size: 1.7rem; } h2 { font-size: 1.15rem; margin: 22px 0 10px; }
+h3 { font-size: 1rem; margin: 12px 0 8px; }
+.muted { color: var(--muted); } .small { font-size: .85rem; }
+.err { color: var(--danger); } .ok { color: var(--ok); }
+
+button { font: inherit; cursor: pointer; }
+.btn {
+  background: linear-gradient(135deg, var(--accent), #ff7a52);
+  color: #fff; border: 0; padding: 13px 20px; border-radius: 999px;
+  font-weight: 600; transition: transform .12s ease, opacity .2s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:disabled { opacity: .4; transform: none; cursor: default; }
+.btn--block { width: 100%; display: block; }
+.btn--lg { padding: 16px; font-size: 1.05rem; margin-top: 12px; }
+.btn--ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.btn--danger { background: linear-gradient(135deg, #ff6b6b, #c0392b); }
+.linkbtn { background: none; border: 0; color: var(--accent-2); font-weight: 600; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+
+/* ----- Inputs ----- */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: .82rem; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+input, select {
+  width: 100%; font: inherit; color: var(--ink);
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px 14px;
+}
+input:focus, select:focus { outline: none; border-color: var(--accent-2); }
+.hint { margin-top: 12px; text-align: center; font-size: .9rem; min-height: 1.1em; }
+
+/* ----- Auth ----- */
+.auth { margin-top: 6vh; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand__mark { color: var(--accent); font-size: 1.6rem; }
+.tagline { color: var(--muted); margin: 6px 0 22px; }
+.auth .btn, .auth .linkbtn { margin-top: 10px; }
+.auth .linkbtn { display: block; width: 100%; text-align: center; }
+
+/* ----- Setup ----- */
+.setup ol { margin: 14px 0 14px 20px; line-height: 1.9; }
+
+/* ----- App shell ----- */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px 18px; }
+
+/* ----- Hero / Avatar ----- */
+.hero { text-align: center; padding: 10px 0 6px; }
+.avatar-wrap { display: flex; justify-content: center; }
+.avatar { filter: drop-shadow(0 8px 24px rgba(0,0,0,.5)); }
+.rank { font-weight: 700; letter-spacing: .03em; margin-top: 4px; }
+.xpbar { height: 10px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin: 12px auto 6px; max-width: 320px; }
+.xpbar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+
+/* ----- Stats ----- */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }
+.chip { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; }
+.chip__v { display: block; font-size: 1.25rem; font-weight: 700; }
+.chip__l { font-size: .7rem; color: var(--muted); }
+
+/* ----- History ----- */
+.history { display: flex; flex-direction: column; gap: 8px; }
+.wrow { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.wrow__xp { font-weight: 700; color: var(--ok); }
+.tag { font-size: .72rem; padding: 3px 8px; border-radius: 999px; }
+.tag--ok { background: rgba(70,211,154,.15); color: var(--ok); }
+.tag--muted { background: var(--bg-2); color: var(--muted); }
+.tag--pr { background: rgba(227,179,65,.18); color: #e3b341; font-weight: 700; }
+
+/* ----- Live workout ----- */
+.timercard { text-align: center; margin: 8px 0; }
+.bigtimer { font-size: 3.4rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.sets { margin-top: 18px; }
+.setform { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 12px; }
+.setform input, .setform select { padding: 10px; }
+.setrow { display: flex; justify-content: space-between; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; margin-bottom: 6px; }
+
+@media (max-width: 420px) {
+  .setform { grid-template-columns: 1fr 1fr; }
+  .setform select { grid-column: 1 / -1; }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "FitRank — Das verifizierte Fitness-RPG",
+  "short_name": "FitRank",
+  "description": "Dein Charakter wächst nur durch echtes, nachgewiesenes Training. Trainiere echt, level up.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e1018",
+  "theme_color": "#0e1018",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
