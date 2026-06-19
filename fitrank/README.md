@@ -30,7 +30,9 @@ fitrank/
 ├── icons/icon.svg
 ├── db/
 │   ├── schema.sql        ⭐ Tabellen + RLS + Anti-Cheat-Trigger (Phase 0/1)
-│   └── migration_phase3.sql  Trainingspläne (Phase 3)
+│   ├── migration_phase3.sql      Trainingspläne (Phase 3)
+│   └── migration_phase_ai.sql    KI-Coach-Protokoll/Tageslimit
+├── supabase/functions/coach/index.ts   KI-Coach (Edge Function, OpenAI)
 └── js/
     ├── config.js         ⭐ hier Supabase-URL + anon-Key eintragen
     ├── db.js             Supabase-Client + Datenzugriff
@@ -66,6 +68,29 @@ fitrank/
 - Auf [Vercel](https://vercel.com) importieren und als **Root-Verzeichnis** `fitrank`
   wählen → „Deploy". Die `vercel.json` setzt die Security-Header automatisch.
 
+## KI-Coach (OpenAI) einrichten — optional
+Der Coach analysiert deine verifizierten Workouts und gibt Tipps. Der OpenAI-Key
+bleibt dabei **serverseitig** in einer Supabase Edge Function.
+
+1. **Tabelle anlegen:** `db/migration_phase_ai.sql` im SQL-Editor ausführen.
+2. **Supabase CLI** installieren und einloggen (`npm i -g supabase`, `supabase login`,
+   `supabase link --project-ref DEIN_REF`).
+3. **OpenAI-Key als Secret setzen** (kommt NICHT ins Repo):
+   ```bash
+   supabase secrets set OPENAI_API_KEY=sk-...
+   # optional:
+   supabase secrets set OPENAI_MODEL=gpt-4o-mini AI_DAILY_CAP=5
+   ```
+4. **Funktion deployen:**
+   ```bash
+   supabase functions deploy coach
+   ```
+5. Im Dashboard erscheint der Coach unter „Home → Dein KI-Coach". Ohne diese Schritte
+   zeigt der Button einfach eine Hinweis-Meldung — die App funktioniert trotzdem.
+
+> 💸 OpenAI kostet pro Anfrage. Das Tageslimit (`AI_DAILY_CAP`) schützt vor Überraschungen.
+> Ideal als späteres **Premium-Feature**.
+
 ## So testest du, dass es funktioniert
 1. **Zwei Konten** anlegen → mit Konto A versuchen, Daten von B zu sehen → unmöglich (RLS).
 2. **Live-Workout** starten (Lauf mit GPS oder Kraft mit Bewegung) → beenden →
@@ -78,8 +103,10 @@ fitrank/
 - [x] Phase 1: Auth, verifiziertes Live-Workout, Logbuch/Sätze, PR-Erkennung
 - [x] Phase 2: Avatar-Gear (level-freigeschaltet, an-/ablegbar) + Quests
 - [x] Phase 3: Trainingspläne, Wochen-Volumen, Körpergewicht-Chart, Habits/Streaks
+- [x] KI-Coach (OpenAI) via sicherer Edge Function + Tageslimit
 - [ ] Phase 4: Freunde, verifizierte Bestenliste, Wochen-Challenges
 - [ ] Phase 5: Web-Bluetooth-Pulsmessung
+- [ ] Strava-/Garmin-Import (OAuth) für echte Geräte-Daten
 - [ ] Später: native Hülle (Apple Health / Health Connect), Ranked-Seasons, Premium-Kosmetik
 
 ## Wichtige Hinweise

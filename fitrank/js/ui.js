@@ -167,10 +167,14 @@ async function viewHome(session, root) {
   // Gear
   const gearSection = renderGearSection(session, profile, root);
 
+  // KI-Coach
+  const coachSection = renderCoachSection();
+
   root.replaceChildren(
     hero, statRow,
     el("button", { class: "btn btn--block btn--lg", text: "▶ Training starten", onclick: () => openWorkout(session, null) }),
     el("h2", { text: "Quests" }), questList,
+    el("h2", { text: "Dein KI-Coach" }), coachSection,
     el("h2", { text: "Ausrüstung" }), gearSection,
   );
   applyBars(root);
@@ -217,6 +221,21 @@ function renderGearSection(session, profile, homeRoot) {
     } catch (e) { /* still */ }
   }
   return wrap;
+}
+function renderCoachSection() {
+  const out = el("div", { class: "coach-out muted small", text: "Hol dir einen Tipp basierend auf deinen letzten verifizierten Workouts." });
+  const btn = el("button", { class: "btn btn--ghost btn--block", text: "🤖 Coach-Tipp holen" });
+  btn.addEventListener("click", async () => {
+    btn.setAttribute("disabled", "");
+    out.className = "coach-out muted small"; out.textContent = "Coach denkt nach …";
+    try {
+      const { advice } = await DB.getCoachAdvice();
+      out.className = "coach-out"; out.textContent = advice;
+    } catch (e) {
+      out.className = "coach-out err small"; out.textContent = e.message || "Coach nicht erreichbar.";
+    } finally { btn.removeAttribute("disabled"); }
+  });
+  return el("div", { class: "card coach" }, [out, btn]);
 }
 function slotLabel(slot) { return ({ headband: "Kopf", cape: "Umhang", aura: "Aura" })[slot] || slot; }
 function gearOption(label, active, locked, onClick) {

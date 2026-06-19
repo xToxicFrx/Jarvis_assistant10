@@ -176,6 +176,11 @@ input:focus, select:focus { outline: none; border-color: var(--accent-2); }
 .setform--habit { grid-template-columns: 56px 1fr auto; }
 .habit__icon-in { text-align: center; }
 
+/* KI-Coach */
+.coach { display: flex; flex-direction: column; gap: 12px; }
+.coach-out { white-space: pre-wrap; line-height: 1.55; }
+.coach .btn { margin-top: 2px; }
+
 /* Plan-Chips im Live-Workout */
 .planchips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .planchip { background: var(--card); border: 1px solid var(--line); color: var(--ink); padding: 7px 12px; border-radius: 999px; font-size: .8rem; }

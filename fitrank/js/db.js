@@ -197,6 +197,18 @@ export async function unlogHabit(habitId, date) {
   if (error) throw error;
 }
 
+// ---------- KI-Coach (Edge Function) ----------
+export async function getCoachAdvice() {
+  const { data, error } = await supabase.functions.invoke("coach", { body: {} });
+  if (error) {
+    let msg = error.message || "Coach nicht erreichbar.";
+    // Unsere JSON-Fehlermeldung aus der Funktion herausziehen, falls vorhanden.
+    try { const j = await error.context.json(); if (j && j.error) msg = j.error; } catch {}
+    throw new Error(msg);
+  }
+  return data; // { advice }
+}
+
 // ---------- Freunde ----------
 export async function findUserByUsername(username) {
   const { data, error } = await supabase.rpc("find_user_by_username", { p_username: username });
